@@ -144,7 +144,7 @@ export default function MMKCreator() {
             className="w-full p-2 border rounded-md mb-4"
             />
             <button
-            onClick={(e) => {
+            onClick={() => {
                 setTools([]);
                 nextStep(); // Move to OP1 Tool Input (Step 7)
                 
