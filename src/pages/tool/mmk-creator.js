@@ -1,0 +1,349 @@
+"use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+export default function MMKCreator() {
+  const router = useRouter();
+  const [workpieceNumber, setWorkpieceNumber] = useState("");
+  const [operations, setOperations] = useState(1);
+  const [op1, setOp1] = useState("");
+  const [op2, setOp2] = useState("");
+  const [flowDirection, setFlowDirection] = useState("left-to-right");
+  const [mmkHeader, setMmkHeader] = useState("");
+  const [step, setStep] = useState(1); // Controls which part of the form is visible
+  const [toolCount, setToolCount] = useState(0);
+  const [currentToolIndex, setCurrentToolIndex] = useState(0);
+  const [tools, setTools] = useState([]);
+  const [mm100Text, setMm100Text] = useState(""); // ✅ Add this line
+
+
+
+
+  // Move to next step
+  const nextStep = () => setStep(step + 1);
+
+  // Automatically store header and move forward
+  const storeHeaderAndContinue = () => {
+    const lowerOp = Number(op1);
+    const higherOp = operations === 2 ? Number(op2) : null;
+
+    let mm1Text = `[MM1]\nTEXT="OP${lowerOp} ${workpieceNumber}"\n;\n`;
+    let mm100Text = operations === 2 ? `[MM100]\nTEXT="OP${higherOp} ${workpieceNumber}"\n;` : ""; 
+
+    if (flowDirection === "right-to-left" && higherOp) {
+        mm1Text = `[MM1]\nTEXT="OP${higherOp} ${workpieceNumber}"\n;\n`;
+        mm100Text = `[MM100]\nTEXT="OP${lowerOp} ${workpieceNumber}"\n;\n`;
+    }
+
+    setMm100Text(mm100Text); // ✅ Store MM100 after it's finalized
+    setMmkHeader(mm1Text); // ✅ Start MMK header with MM1 only
+    nextStep();
+};
+
+
+  return (
+    <div className="flex flex-col items-center p-6">
+      <h1 className="text-3xl font-bold mb-6">MMK Creator</h1>
+
+      {/* Step 1: Ask for Workpiece Number */}
+      {step === 1 && (
+        <div className="w-full max-w-md">
+          <label className="block text-lg mb-2">Enter Workpiece Number:</label>
+          <input
+            type="text"
+            value={workpieceNumber}
+            onChange={(e) => setWorkpieceNumber(e.target.value)}
+            className="w-full p-2 border rounded-md mb-4"
+          />
+          <button onClick={nextStep} className="bg-blue-500 text-white px-4 py-2 rounded-md">
+            Next
+          </button>
+        </div>
+      )}
+
+      {/* Step 2: Ask if 1 or 2 Operations */}
+      {step === 2 && (
+        <div className="w-full max-w-md">
+          <label className="block text-lg mb-2">How many operations?</label>
+          <select
+            value={operations}
+            onChange={(e) => setOperations(Number(e.target.value))}
+            className="w-full p-2 border rounded-md mb-4"
+          >
+            <option value={1}>1 Operation</option>
+            <option value={2}>2 Operations</option>
+          </select>
+          <button onClick={nextStep} className="bg-blue-500 text-white px-4 py-2 rounded-md">
+            Next
+          </button>
+        </div>
+      )}
+
+      {/* Step 3: Ask for Operation Numbers */}
+      {step === 3 && (
+        <div className="w-full max-w-md">
+          <label className="block text-lg mb-2">Enter First Operation Number:</label>
+          <input
+            type="text"
+            value={op1}
+            onChange={(e) => setOp1(e.target.value)}
+            className="w-full p-2 border rounded-md mb-4"
+          />
+
+          {operations === 2 && (
+            <>
+              <label className="block text-lg mb-2">Enter Second Operation Number:</label>
+              <input
+                type="text"
+                value={op2}
+                onChange={(e) => setOp2(e.target.value)}
+                className="w-full p-2 border rounded-md mb-4"
+              />
+            </>
+          )}
+
+          <button onClick={nextStep} className="bg-blue-500 text-white px-4 py-2 rounded-md">
+            Next
+          </button>
+        </div>
+      )}
+
+      {/* Step 4: Ask for Machining Flow */}
+      {step === 4 && (
+        <div className="w-full max-w-md">
+          <label className="block text-lg mb-2">Machining Flow:</label>
+          <select
+            value={flowDirection}
+            onChange={(e) => setFlowDirection(e.target.value)}
+            className="w-full p-2 border rounded-md mb-4"
+          >
+            <option value="left-to-right">Left to Right</option>
+            <option value="right-to-left">Right to Left</option>
+          </select>
+          <button onClick={storeHeaderAndContinue} className="bg-blue-500 text-white px-4 py-2 rounded-md">
+            Next
+          </button>
+        </div>
+      )}
+
+      {/* Step 5: Show Headers */}
+      {step === 5 && (
+        <div className="w-full max-w-md">
+          <h2 className="text-xl font-semibold mb-4">Header Stored ✅</h2>
+          <p className="bg-gray-100 p-4 rounded-md font-mono text-sm whitespace-pre-line mb-4">
+            {mmkHeader}
+          </p>
+          <button onClick={nextStep} className="bg-green-500 text-white px-4 py-2 rounded-md">
+            Continue to Tool Setup
+          </button>
+        </div>
+      )}
+      {/* Step 6: Ask how many tools for the lower operation */}
+      {step === 6 && (
+        <div className="w-full max-w-md">
+            <label className="block text-lg mb-2">
+            How many tools are used for OP{op1}?
+            </label>
+            <input
+            type="number"
+            min="1"
+            value={toolCount}
+            onChange={(e) => setToolCount(Number(e.target.value))}
+            className="w-full p-2 border rounded-md mb-4"
+            />
+            <button
+            onClick={(e) => {
+                setTools([]);
+                nextStep(); // Move to OP1 Tool Input (Step 7)
+                
+            }}
+            className="bg-blue-500 text-white px-4 py-2 rounded-md"
+            >
+            Next
+            </button>
+        </div>
+        )}
+
+        {step === 6.2 && (
+        <div className="w-full max-w-md">
+            <label className="block text-lg mb-2">
+            How many tools are used for OP{op2}?
+            </label>
+            <input
+            type="number"
+            min="1"
+            value={toolCount}
+            onChange={(e) => {
+                setToolCount(Number(e.target.value));
+            }}            
+            
+            className="w-full p-2 border rounded-md mb-4"
+            />
+            <button
+            onClick={() => {
+                setTools([...tools]); // Keep OP1 tools
+                setCurrentToolIndex(0); // Reset index for OP2 tools
+                setStep(7.2); // Move to OP2 Tool Input
+
+            }}
+            className="bg-blue-500 text-white px-4 py-2 rounded-md"
+            >
+            Next
+            </button>
+        </div>
+        )}
+
+
+      {/* Step 7: Tool Details Input */}
+      {((step === 7 && currentToolIndex < toolCount) || (step === 7.2 && currentToolIndex < toolCount)) && (
+        <div className="w-full max-w-md">
+
+            <h2 className="text-xl font-semibold mb-4">
+                Tool {currentToolIndex + 1} for OP{step === 7 ? op1 : op2}
+            </h2>
+
+
+            {/* Tool Number Input */}
+            <div className="mb-4">
+            <label className="block text-lg mb-2">Tool Number:</label>
+            <input
+                type="text"
+                className="w-full p-2 border rounded-md"
+                onChange={(e) => {
+                const updatedTools = [...tools];
+                updatedTools[currentToolIndex] = { ...updatedTools[currentToolIndex], toolNumber: e.target.value };
+                setTools(updatedTools);
+                }}
+            />
+            </div>
+
+            {/* Display Text Input */}
+            <div className="mb-4">
+            <label className="block text-lg mb-2">Display Text (Cut Type & Nominal):</label>
+            <input
+                type="text"
+                className="w-full p-2 border rounded-md"
+                onChange={(e) => {
+                const updatedTools = [...tools];
+                updatedTools[currentToolIndex] = { ...updatedTools[currentToolIndex], displayText: e.target.value };
+                setTools(updatedTools);
+                }}
+            />
+            </div>
+
+            {/* Cutting Edge (D Number) */}
+            <div className="mb-4">
+            <label className="block text-lg mb-2">Cutting Edge (D Number, Default: 1):</label>
+            <input
+                type="number"
+                min="1"
+                defaultValue="1"
+                className="w-full p-2 border rounded-md"
+                onChange={(e) => {
+                const updatedTools = [...tools];
+                updatedTools[currentToolIndex] = {
+                    ...updatedTools[currentToolIndex],
+                    cuttingEdge: e.target.value || "1" // Default to 1 if empty
+                };
+                setTools(updatedTools);
+                }}
+            />
+            </div>
+
+            {/* Axis (V Number) Selection */}
+                <div className="mb-4">
+                <label className="block text-lg mb-2">Select Axis (V Number):</label>
+                <select
+                    className="w-full p-2 border rounded-md"
+                    onChange={(e) => {
+                    const updatedTools = [...tools];
+                    updatedTools[currentToolIndex] = { 
+                        ...updatedTools[currentToolIndex], 
+                        axis: e.target.value // Stores only 1, 2, or 3
+                    };
+                    setTools(updatedTools);
+                    }}
+                >   
+                    <option value="">Select Axis</option>
+                    <option value="1">X / 1</option>
+                    <option value="2">Z / 2</option>
+                    <option value="3">Y / 3</option>
+                </select>
+                </div>
+
+
+            {/* Next Tool Button */}
+            <button
+            onClick={() => {
+                setCurrentToolIndex(currentToolIndex + 1);
+
+                if (currentToolIndex + 1 === toolCount) {
+                    const op = step === 7 ? op1 : op2;
+                    const toolOffset = step === 7 ? 2 : 101; // OP2 should start from MM100
+
+                    const toolData = tools
+                        .filter(tool => tool) // Ensure no undefined tools
+                        .map((tool, index) => {
+                            return `\n[MM${index + toolOffset}]\nTEXT="${tool.displayText || ""}"\nChan=${flowDirection === "left-to-right" ? 1 : 2}\nT=T${tool.toolNumber || "?"}_OP${op} D${tool.cuttingEdge || 1} V${tool.axis || "?"}\nFAKTOR=100\n;\n`;
+                        }).join("");
+
+                
+                        setMmkHeader((prevHeader) => {
+                            let updatedHeader = prevHeader + toolData;
+                        
+                            // ✅ Insert MM100Text after OP1 tools but before OP2 starts
+                            if (operations === 2 && step === 7) {
+                                updatedHeader += `\n${mm100Text}\n`;
+                            }
+                        
+                            return updatedHeader;
+                        });
+                        
+                        
+                        
+                        
+                
+                    if (operations === 2 && step === 7) {
+                        setStep(6.2); // Move to OP2 Tool Count
+                    } else {
+                        setStep(8); // Move to MMK Display
+                    }
+                    
+                }
+                
+            }}
+            className="bg-blue-500 text-white px-4 py-2 rounded-md"
+            >
+            Next Tool
+            </button>
+        </div>
+        )}
+
+
+
+    {/* Step 8: Show MMK with Proper Notepad++ Formatting */}
+    {step === 8 && (
+        <div className="w-full max-w-md">
+            <h2 className="text-xl font-semibold mb-4">MMK Program ✅</h2>
+            <textarea
+            className="w-full p-4 border rounded-md font-mono text-sm"
+            rows="15"
+            readOnly
+            value={`${mmkHeader.trim()}\n\n; Standard MMK Section\n;`}
+            ></textarea>
+            <button
+            onClick={() => navigator.clipboard.writeText(mmkHeader)}
+            className="bg-green-500 text-white px-4 py-2 mt-4 rounded-md"
+            >
+            Copy MMK Program
+            </button>
+        </div>
+        )}
+
+
+
+
+    </div>
+  );
+}
+
