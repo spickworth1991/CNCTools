@@ -1,9 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  experimental: {
-    appDir: true, // Ensure compatibility with Next.js 15
-  },
+
+  // Add the following line to the next.config.js file to resolve the error:
+  webpack5: false,
 };
 
 module.exports = nextConfig;
