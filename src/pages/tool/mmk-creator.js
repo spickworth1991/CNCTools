@@ -11,7 +11,7 @@ export default function MMKCreator() {
   const [flowDirection, setFlowDirection] = useState("left-to-right");
   const [mmkHeader, setMmkHeader] = useState("");
   const [step, setStep] = useState(1); // Controls which part of the form is visible
-  const [toolCount, setToolCount] = useState(0);
+  const [toolCount, setToolCount] = useState({}); // ✅ Now an object
   const [currentToolIndex, setCurrentToolIndex] = useState(0);
   const [tools, setTools] = useState([]);
   const [mm100Text, setMm100Text] = useState(""); // ✅ Add this line
@@ -131,14 +131,13 @@ export default function MMKCreator() {
             How many tools are used for OP{op1}?
             </label>
             <input
-            type="number"
-            min="1"
-            value={toolCount}
-            onChange={(e) => setToolCount((prev) => ({
-              ...prev,
-              [op1]: Number(e.target.value) // ✅ Store OP1 tool count separately
-          }))
-          }
+              type="number"
+              min="1"
+              value={toolCount[op1] || ""}
+              onChange={(e) => setToolCount((prev) => ({
+                ...prev,
+                [op1]: Number(e.target.value) || 1 // ✅ Default to 1 if empty
+              }))}
             className="w-full p-2 border rounded-md mb-4"
             />
             <button
@@ -160,22 +159,28 @@ export default function MMKCreator() {
             How many tools are used for OP{op2}?
             </label>
             <input
-            type="number"
-            min="1"
-            value={toolCount}
-            onChange={(e) => {
-              setToolCount((prev) => ({
+              type="number"
+              min="1"
+              value={toolCount[op2] || ""}
+              onChange={(e) => setToolCount((prev) => ({
                 ...prev,
-                [op2]: Number(e.target.value) // ✅ Store OP2 tool count separately
-            }));
-            
-            }}            
+                [op2]: Number(e.target.value) || 1 // ✅ Default to 1 if empty
+              }))}          
             
             className="w-full p-2 border rounded-md mb-4"
             />
             <button
             onClick={() => {
-              setCurrentToolIndex((prevIndex) => prevIndex + 1);
+              if (step === 6 && currentToolIndex + 1 < toolCount[op1]) {
+                setCurrentToolIndex((prevIndex) => prevIndex + 1); // ✅ Move to next OP1 tool
+              } else if (step === 6.2 && currentToolIndex + 1 < toolCount[op2]) {
+                setCurrentToolIndex((prevIndex) => prevIndex + 1); // ✅ Move to next OP2 tool
+              } else if (step === 6 && currentToolIndex + 1 >= toolCount[op1]) {
+                setCurrentToolIndex(0); // ✅ Reset for OP2 tools
+                setStep(5.2); // Move to OP2 Tool Count Step
+              } else if (step === 6.2 && currentToolIndex + 1 >= toolCount[op2]) {
+                setStep(7); // ✅ Move to MMK Display when OP2 tools are done
+              }              
               setStep(6.2);
               
 
