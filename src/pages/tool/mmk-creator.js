@@ -167,9 +167,9 @@ export default function MMKCreator() {
             />
             <button
             onClick={() => {
-                setTools([...tools]); // Keep OP1 tools
-                setCurrentToolIndex(0); // Reset index for OP2 tools
-                setStep(6.2); // Move to OP2 Tool Input
+              setCurrentToolIndex(0);
+              setStep(6.2);
+              
 
             }}
             className="bg-blue-500 text-white px-4 py-2 rounded-md"
@@ -196,8 +196,9 @@ export default function MMKCreator() {
                 className="w-full p-2 border rounded-md"
                 onChange={(e) => {
                 const updatedTools = [...tools];
-                updatedTools[currentToolIndex] = { ...updatedTools[currentToolIndex], toolNumber: e.target.value };
+                updatedTools[currentToolIndex] = { ...updatedTools[currentToolIndex], toolNumber: e.target.value, op: step === 6 ? op1 : op2 };
                 setTools(updatedTools);
+                
                 }}
             />
             </div>
@@ -210,7 +211,7 @@ export default function MMKCreator() {
                 className="w-full p-2 border rounded-md"
                 onChange={(e) => {
                 const updatedTools = [...tools];
-                updatedTools[currentToolIndex] = { ...updatedTools[currentToolIndex], displayText: e.target.value };
+                updatedTools[currentToolIndex] = { ...updatedTools[currentToolIndex], displayText: e.target.value, op: step === 6 ? op1 : op2  };
                 setTools(updatedTools);
                 }}
             />
@@ -228,7 +229,8 @@ export default function MMKCreator() {
                 const updatedTools = [...tools];
                 updatedTools[currentToolIndex] = {
                     ...updatedTools[currentToolIndex],
-                    cuttingEdge: e.target.value || "1" // Default to 1 if empty
+                    cuttingEdge: e.target.value || "1" ,
+                    op: step === 6 ? op1 : op2 
                 };
                 setTools(updatedTools);
                 }}
@@ -244,7 +246,8 @@ export default function MMKCreator() {
                     const updatedTools = [...tools];
                     updatedTools[currentToolIndex] = { 
                         ...updatedTools[currentToolIndex], 
-                        axis: e.target.value // Stores only 1, 2, or 3
+                        axis: e.target.value, // Stores only 1, 2, or 3
+                        op: step === 6 ? op1 : op2 
                     };
                     setTools(updatedTools);
                     }}
@@ -261,8 +264,9 @@ export default function MMKCreator() {
             <button
             onClick={() => {
                 // ✅ Separate tools for OP1 and OP2
-                let op1Tools = tools.filter(tool => tool.op === op1);
-                let op2Tools = tools.filter(tool => tool.op === op2);
+                let op1Tools = tools.filter(tool => String(tool.op) === String(op1));
+                let op2Tools = tools.filter(tool => String(tool.op) === String(op2));
+
 
                 // ✅ Swap OP1 and OP2 tool groups when machining is Right-to-Left
                 if (flowDirection === "right-to-left") {
@@ -286,17 +290,18 @@ export default function MMKCreator() {
 
                 // ✅ Ensure MM100 is inserted **AFTER** OP1 tools, **BEFORE** OP2 tools
                 setMmkHeader((prevHeader) => {
-                    let updatedHeader = prevHeader + formattedOp1Tools;
-                    
-                    // ✅ Only add MM100 once in the correct position
-                    if (operations === 2) {
-                        updatedHeader += `\n${mm100Text}\n`;
-                    }
-                    
-                    updatedHeader += formattedOp2Tools;
-                    
-                    return updatedHeader;
-                });
+                  let updatedHeader = prevHeader + formattedOp1Tools;
+                  
+                  // ✅ Only add MM100 once in the correct position
+                  if (operations === 2 && !prevHeader.includes(mm100Text)) {
+                      updatedHeader += `\n${mm100Text}\n`;
+                  }
+                  
+                  updatedHeader += formattedOp2Tools;
+                  
+                  return updatedHeader;
+              });
+              
 
                 // ✅ Move to OP2 tool count or MMK display
                 if (operations === 2 && step === 6) {
