@@ -171,16 +171,7 @@ export default function MMKCreator() {
             />
             <button
             onClick={() => {
-              if (step === 6 && currentToolIndex + 1 < toolCount[op1]) {
-                setCurrentToolIndex((prevIndex) => prevIndex + 1); // ✅ Move to next OP1 tool
-              } else if (step === 6.2 && currentToolIndex + 1 < toolCount[op2]) {
-                setCurrentToolIndex((prevIndex) => prevIndex + 1); // ✅ Move to next OP2 tool
-              } else if (step === 6 && currentToolIndex + 1 >= toolCount[op1]) {
-                setCurrentToolIndex(0); // ✅ Reset for OP2 tools
-                setStep(5.2); // Move to OP2 Tool Count Step
-              } else if (step === 6.2 && currentToolIndex + 1 >= toolCount[op2]) {
-                setStep(7); // ✅ Move to MMK Display when OP2 tools are done
-              }              
+              setCurrentToolIndex((prevIndex) => prevIndex + 1);
               setStep(6.2);
               
 
@@ -323,13 +314,21 @@ export default function MMKCreator() {
               
 
                 // ✅ Move to OP2 tool count or MMK display
-                if (operations === 2 && step === 6 && currentToolIndex + 1 >= toolCount[op1]) {
-                  setCurrentToolIndex(0); // ✅ Reset for OP2 tools
-                  setStep(5.2); // Move to OP2 Tool Count
-                } else if (step === 6.2 && currentToolIndex + 1 >= toolCount[op2]) {
-                  setStep(7); // ✅ Move to MMK Display only after all OP2 tools are entered
-              }    
-            }}
+                if (step === 6 && currentToolIndex + 1 < (toolCount[op1] || 0)) {
+                  setCurrentToolIndex((prevIndex) => prevIndex + 1); // ✅ Move to next OP1 tool
+              } else if (step === 6 && currentToolIndex + 1 >= (toolCount[op1] || 0)) {
+                  setCurrentToolIndex(0); // ✅ Reset index for OP2
+                  if (operations === 2) {
+                      setStep(6.2); // ✅ Move to OP2 tool entry
+                  } else {
+                      setStep(7); // ✅ Skip to MMK output if only one operation
+                  }
+              } else if (step === 6.2 && currentToolIndex + 1 < (toolCount[op2] || 0)) {
+                  setCurrentToolIndex((prevIndex) => prevIndex + 1); // ✅ Move to next OP2 tool
+              } else if (step === 6.2 && currentToolIndex + 1 >= (toolCount[op2] || 0)) {
+                  setStep(7); // ✅ Move to MMK Display after OP2 tools are done
+              }
+          }}
             className="bg-blue-500 text-white px-4 py-2 rounded-md"
             >
             Next Tool
