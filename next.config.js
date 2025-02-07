@@ -1,12 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
-  reactStrictMode: true, // Helps with highlighting React best practices
+  reactStrictMode: true,
   eslint: {
-    ignoreDuringBuilds: true, // Allows builds to proceed even with ESLint errors
+    ignoreDuringBuilds: true,
   },
   typescript: {
-    ignoreBuildErrors: true, // Allows builds to proceed even with TypeScript errors
+    ignoreBuildErrors: true,
   },
 };
 
