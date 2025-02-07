@@ -16,9 +16,6 @@ export default function MMKCreator() {
   const [tools, setTools] = useState([]);
   const [mm100Text, setMm100Text] = useState(""); // ✅ Add this line
 
-
-
-
   // Move to next step
   const nextStep = () => setStep(step + 1);
 
@@ -29,7 +26,6 @@ export default function MMKCreator() {
 
     let mm1Text, mm100Text;
 
-    // ✅ Swap lower/higher operations based on direction
     if (flowDirection === "left-to-right") {
         mm1Text = `[MM1]\nTEXT="OP${lowerOp} ${workpieceNumber}"\n;\n`;
         mm100Text = operations === 2 ? `[MM100]\nTEXT="OP${higherOp} ${workpieceNumber}"\n;\n` : "";
@@ -42,7 +38,6 @@ export default function MMKCreator() {
     setMmkHeader(`[MM0]\nTEXT="${workpieceNumber}"\n;\n` + mm1Text);
     nextStep();
 };
-
 
   return (
     <div className="flex flex-col items-center p-6">
@@ -129,8 +124,7 @@ export default function MMKCreator() {
         </div>
       )}
 
-
-      {/* Step 6: Ask how many tools for the lower operation */}
+      {/* Step 5: Ask how many tools for the lower operation */}
       {step === 5 && (
         <div className="w-full max-w-md">
             <label className="block text-lg mb-2">
@@ -184,7 +178,6 @@ export default function MMKCreator() {
             </button>
         </div>
         )}
-
 
       {/* Step 6+6.2: Tool Details Input */}
       {((step === 6 && currentToolIndex < toolCount) || (step === 6.2 && currentToolIndex < toolCount)) && (
@@ -278,33 +271,28 @@ export default function MMKCreator() {
                       ? tools.reverse() 
                       : tools;
 
-                      const formattedToolData = sortedTools
+                      const formattedToolData = tools
                       .filter(tool => tool) // Ensure no undefined tools
                       .map((tool, index) => {
-                          const chanValue = flowDirection === "left-to-right" 
-                              ? (op === op1 ? 1 : 2)  // ✅ L → R: OP1 → Chan 1, OP2 → Chan 2
-                              : (op === op1 ? 2 : 1);  // ✅ R → L: OP1 → Chan 2, OP2 → Chan 1
+                          const isOp1 = op === op1;
+
+                          const chanValue = flowDirection === "left-to-right"
+                              ? (isOp1 ? 1 : 2) // ✅ L → R: OP1 → Chan 1, OP2 → Chan 2
+                              : (isOp1 ? 2 : 1); // ✅ R → L: OP1 → Chan 2, OP2 → Chan 1
 
                           return `[MM${index + toolOffset}]\nTEXT="${tool.displayText || ""}"\nChan=${chanValue}\nT=T${tool.toolNumber || "?"}_OP${op} D${tool.cuttingEdge || 1} V${tool.axis || "?"}\nFAKTOR=100\n;`;
                       }).join("\n");
 
+                      setMmkHeader((prevHeader) => {
+                        let updatedHeader = prevHeader + formattedToolData;
+                    
+                        if (operations === 2 && step === 6) {
+                            updatedHeader += `\n${mm100Text}\n`; // ✅ Append MM100 AFTER OP1 tools
+                        }
+                    
+                        return updatedHeader;
+                    });
 
-    
-                        setMmkHeader((prevHeader) => {
-                          let updatedHeader = prevHeader + formattedToolData; // ✅ Use formattedToolData properly
-                          
-                          if (operations === 2 && step === 6) {
-                              updatedHeader += `\n${mm100Text}\n`;
-                          }
-                          
-                          return updatedHeader;
-                      });
-                      
-                        
-                        
-                        
-                        
-                
                     if (operations === 2 && step === 6) {
                         setStep(5.2); // Move to OP2 Tool Count
                     } else {
@@ -321,9 +309,7 @@ export default function MMKCreator() {
         </div>
         )}
 
-
-
-    {/* Step 8: Show MMK with Proper Notepad++ Formatting */}
+    {/* Step 7: Show MMK with Proper Notepad++ Formatting */}
     {step === 7 && (
         <div className="w-full max-w-md">
             <h2 className="text-xl font-semibold mb-4">MMK Program ✅</h2>
@@ -349,9 +335,6 @@ export default function MMKCreator() {
 
         </div>
         )}
-
-
-
 
     </div>
   );
