@@ -137,7 +137,7 @@ export default function MMKCreator() {
               onChange={(e) => setToolCount((prev) => ({
                 ...prev,
                 [op1]: Number(e.target.value) || 1 // ✅ Default to 1 if empty
-              }))}
+              }))}              
             className="w-full p-2 border rounded-md mb-4"
             />
             <button
@@ -162,10 +162,14 @@ export default function MMKCreator() {
               type="number"
               min="1"
               value={toolCount[op2] || ""}
-              onChange={(e) => setToolCount((prev) => ({
-                ...prev,
-                [op2]: Number(e.target.value) || 1 // ✅ Default to 1 if empty
-              }))}          
+              onChange={(e) => {
+                const count = Number(e.target.value) || 1;
+                setToolCount((prev) => ({
+                  ...prev,
+                  [op2]: count
+                }));
+              }}
+                        
             
             className="w-full p-2 border rounded-md mb-4"
             />
@@ -300,17 +304,19 @@ export default function MMKCreator() {
 
                 // ✅ Ensure MM100 is inserted **AFTER** OP1 tools, **BEFORE** OP2 tools
                 setMmkHeader((prevHeader) => {
-                  let updatedHeader = prevHeader + formattedOp1Tools;
+                  let updatedHeader = `[MM0]\nTEXT="${workpieceNumber}"\n;\n[MM1]\nTEXT="OP${op1} ${workpieceNumber}"\n;\n`;
                   
-                  // ✅ Only add MM100 once in the correct position
-                  if (operations === 2 && !prevHeader.includes(mm100Text)) {
-                      updatedHeader += `\n${mm100Text}\n`;
+                  // ✅ Insert OP1 tools correctly
+                  updatedHeader += formattedOp1Tools;
+              
+                  if (operations === 2) {
+                      updatedHeader += `[MM100]\nTEXT="OP${op2} ${workpieceNumber}"\n;\n`;
+                      updatedHeader += formattedOp2Tools; // ✅ Insert OP2 tools in correct order
                   }
-                  
-                  updatedHeader += formattedOp2Tools;
-                  
+              
                   return updatedHeader;
               });
+              
               
 
                 // ✅ Move to OP2 tool count or MMK display
@@ -318,7 +324,7 @@ export default function MMKCreator() {
                   setCurrentToolIndex((prevIndex) => prevIndex + 1); // ✅ Move to next OP1 tool
               } else if (step === 6 && currentToolIndex + 1 >= (toolCount[op1] || 0)) {
                   setCurrentToolIndex(0); // ✅ Reset index for OP2
-                  if (operations === 2) {
+                  if (operations === 2 && toolCount[op2] === 0) {
                       setStep(5.2); // ✅ Move to OP2 tool entry
                   } else {
                       setStep(7); // ✅ Skip to MMK output if only one operation
