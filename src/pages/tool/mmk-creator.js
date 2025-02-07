@@ -260,14 +260,6 @@ export default function MMKCreator() {
             {/* Next Tool Button */}
             <button
             onClick={() => {
-                setCurrentToolIndex(currentToolIndex + 1);
-
-                if (currentToolIndex + 1 === toolCount) {
-                    const op = step === 6 ? op1 : op2;
-                    const toolOffset = step === 6 ? 2 : 101; // OP2 should start from MM100
-
-                   // ✅ Flip tool assignment for Right-to-Left direction
-                   
                 // ✅ Separate tools for OP1 and OP2
                 let op1Tools = tools.filter(tool => tool.op === op1);
                 let op2Tools = tools.filter(tool => tool.op === op2);
@@ -277,7 +269,7 @@ export default function MMKCreator() {
                     [op1Tools, op2Tools] = [op2Tools, op1Tools];
                 }
 
-                // ✅ Function to format tools
+                // ✅ Function to format tools into MM sections
                 const formatTools = (tools, op, toolOffset, chanValue) => {
                     return tools.map((tool, index) => {
                         return `[MM${index + toolOffset}]\nTEXT="${tool.displayText || ""}"\nChan=${chanValue}\nT=T${tool.toolNumber || "?"}_OP${op} D${tool.cuttingEdge || 1} V${tool.axis || "?"}\nFAKTOR=100\n;`;
@@ -292,9 +284,17 @@ export default function MMKCreator() {
                 const formattedOp1Tools = formatTools(op1Tools, op1, 2, op1Chan);
                 const formattedOp2Tools = formatTools(op2Tools, op2, 101, op2Chan);
 
-                // ✅ Update MMK header with the correctly assigned tools
+                // ✅ Ensure MM100 is inserted **AFTER** OP1 tools, **BEFORE** OP2 tools
                 setMmkHeader((prevHeader) => {
-                    let updatedHeader = prevHeader + formattedOp1Tools + `\n${mm100Text}\n` + formattedOp2Tools;
+                    let updatedHeader = prevHeader + formattedOp1Tools;
+                    
+                    // ✅ Only add MM100 once in the correct position
+                    if (operations === 2) {
+                        updatedHeader += `\n${mm100Text}\n`;
+                    }
+                    
+                    updatedHeader += formattedOp2Tools;
+                    
                     return updatedHeader;
                 });
 
@@ -305,7 +305,6 @@ export default function MMKCreator() {
                     setStep(7); // Move to MMK Display
                 }
 
-                }
                 
             }}
             className="bg-blue-500 text-white px-4 py-2 rounded-md"
