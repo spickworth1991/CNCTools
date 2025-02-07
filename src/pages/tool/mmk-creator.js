@@ -319,7 +319,7 @@ export default function MMKCreator() {
               } else if (step === 6 && currentToolIndex + 1 >= (toolCount[op1] || 0)) {
                   setCurrentToolIndex(0); // ✅ Reset index for OP2
                   if (operations === 2) {
-                      setStep(6.2); // ✅ Move to OP2 tool entry
+                      setStep(5.2); // ✅ Move to OP2 tool entry
                   } else {
                       setStep(7); // ✅ Skip to MMK output if only one operation
                   }
