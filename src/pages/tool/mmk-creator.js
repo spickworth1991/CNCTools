@@ -267,37 +267,44 @@ export default function MMKCreator() {
                     const toolOffset = step === 6 ? 2 : 101; // OP2 should start from MM100
 
                    // ✅ Flip tool assignment for Right-to-Left direction
-                   const sortedTools = flowDirection === "right-to-left" ? [...tools].reverse() : tools; // ✅ Reverse tools for Right-to-Left
-
-                   const formattedToolData = sortedTools
-                       .filter(tool => tool) // Ensure no undefined tools
-                       .map((tool, index) => {
-                           const isOp1 = op === op1;
                    
-                           const chanValue = flowDirection === "left-to-right"
-                               ? (isOp1 ? 1 : 2) // ✅ L → R: OP1 → Chan 1, OP2 → Chan 2
-                               : (isOp1 ? 2 : 1); // ✅ R → L: OP1 → Chan 2, OP2 → Chan 1
-                   
-                           return `[MM${index + toolOffset}]\nTEXT="${tool.displayText || ""}"\nChan=${chanValue}\nT=T${tool.toolNumber || "?"}_OP${op} D${tool.cuttingEdge || 1} V${tool.axis || "?"}\nFAKTOR=100\n;`;
-                       }).join("\n");
-                   
+                // ✅ Separate tools for OP1 and OP2
+                let op1Tools = tools.filter(tool => tool.op === op1);
+                let op2Tools = tools.filter(tool => tool.op === op2);
 
-                      setMmkHeader((prevHeader) => {
-                        let updatedHeader = prevHeader + formattedToolData;
-                    
-                        if (operations === 2 && step === 6) {
-                            updatedHeader += `\n${mm100Text}\n`; // ✅ Append MM100 AFTER OP1 tools
-                        }
-                    
-                        return updatedHeader;
-                    });
+                // ✅ Swap OP1 and OP2 tool groups when machining is Right-to-Left
+                if (flowDirection === "right-to-left") {
+                    [op1Tools, op2Tools] = [op2Tools, op1Tools];
+                }
 
-                    if (operations === 2 && step === 6) {
-                        setStep(5.2); // Move to OP2 Tool Count
-                    } else {
-                        setStep(7); // Move to MMK Display
-                    }
-                    
+                // ✅ Function to format tools
+                const formatTools = (tools, op, toolOffset, chanValue) => {
+                    return tools.map((tool, index) => {
+                        return `[MM${index + toolOffset}]\nTEXT="${tool.displayText || ""}"\nChan=${chanValue}\nT=T${tool.toolNumber || "?"}_OP${op} D${tool.cuttingEdge || 1} V${tool.axis || "?"}\nFAKTOR=100\n;`;
+                    }).join("\n");
+                };
+
+                // ✅ Assign correct Chan values based on flow direction
+                const op1Chan = flowDirection === "left-to-right" ? 1 : 2;
+                const op2Chan = flowDirection === "left-to-right" ? 2 : 1;
+
+                // ✅ Generate formatted tool sections
+                const formattedOp1Tools = formatTools(op1Tools, op1, 2, op1Chan);
+                const formattedOp2Tools = formatTools(op2Tools, op2, 101, op2Chan);
+
+                // ✅ Update MMK header with the correctly assigned tools
+                setMmkHeader((prevHeader) => {
+                    let updatedHeader = prevHeader + formattedOp1Tools + `\n${mm100Text}\n` + formattedOp2Tools;
+                    return updatedHeader;
+                });
+
+                // ✅ Move to OP2 tool count or MMK display
+                if (operations === 2 && step === 6) {
+                    setStep(5.2); // Move to OP2 Tool Count
+                } else {
+                    setStep(7); // Move to MMK Display
+                }
+
                 }
                 
             }}
