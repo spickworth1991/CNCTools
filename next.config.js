@@ -2,6 +2,7 @@
 const nextConfig = {
   output: "standalone",
   reactStrictMode: true,
+  distDir: ".next",
   eslint: {
     ignoreDuringBuilds: true,
   },
