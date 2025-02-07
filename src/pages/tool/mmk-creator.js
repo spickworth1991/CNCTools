@@ -134,7 +134,11 @@ export default function MMKCreator() {
             type="number"
             min="1"
             value={toolCount}
-            onChange={(e) => setToolCount(Number(e.target.value))}
+            onChange={(e) => setToolCount((prev) => ({
+              ...prev,
+              [op1]: Number(e.target.value) // ✅ Store OP1 tool count separately
+          }))
+          }
             className="w-full p-2 border rounded-md mb-4"
             />
             <button
@@ -160,14 +164,18 @@ export default function MMKCreator() {
             min="1"
             value={toolCount}
             onChange={(e) => {
-                setToolCount(Number(e.target.value));
+              setToolCount((prev) => ({
+                ...prev,
+                [op2]: Number(e.target.value) // ✅ Store OP2 tool count separately
+            }));
+            
             }}            
             
             className="w-full p-2 border rounded-md mb-4"
             />
             <button
             onClick={() => {
-              setCurrentToolIndex(0);
+              setCurrentToolIndex((prevIndex) => prevIndex + 1);
               setStep(6.2);
               
 
@@ -180,7 +188,9 @@ export default function MMKCreator() {
         )}
 
       {/* Step 6+6.2: Tool Details Input */}
-      {((step === 6 && currentToolIndex < toolCount) || (step === 6.2 && currentToolIndex < toolCount)) && (
+      {((step === 6 && currentToolIndex < (toolCount[op1] || 0)) || 
+        (step === 6.2 && currentToolIndex < (toolCount[op2] || 0))) && (
+
         <div className="w-full max-w-md">
 
             <h2 className="text-xl font-semibold mb-4">
@@ -270,8 +280,12 @@ export default function MMKCreator() {
 
                 // ✅ Swap OP1 and OP2 tool groups when machining is Right-to-Left
                 if (flowDirection === "right-to-left") {
-                    [op1Tools, op2Tools] = [op2Tools, op1Tools];
-                }
+                  [op1Tools, op2Tools] = [op2Tools, op1Tools]; // ✅ Swap tool lists
+              } else {
+                  // ✅ Ensure MM1 and MM100 stay in order
+                  op1Tools = tools.filter(tool => String(tool.op) === String(op1));
+                  op2Tools = tools.filter(tool => String(tool.op) === String(op2));
+              }              
 
                 // ✅ Function to format tools into MM sections
                 const formatTools = (tools, op, toolOffset, chanValue) => {
@@ -304,13 +318,12 @@ export default function MMKCreator() {
               
 
                 // ✅ Move to OP2 tool count or MMK display
-                if (operations === 2 && step === 6) {
-                    setStep(5.2); // Move to OP2 Tool Count
-                } else {
-                    setStep(7); // Move to MMK Display
-                }
-
-                
+                if (operations === 2 && step === 6 && currentToolIndex + 1 >= toolCount[op1]) {
+                  setCurrentToolIndex(0); // ✅ Reset for OP2 tools
+                  setStep(5.2); // Move to OP2 Tool Count
+                } else if (step === 6.2 && currentToolIndex + 1 >= toolCount[op2]) {
+                  setStep(7); // ✅ Move to MMK Display only after all OP2 tools are entered
+              }    
             }}
             className="bg-blue-500 text-white px-4 py-2 rounded-md"
             >
