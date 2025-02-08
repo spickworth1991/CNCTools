@@ -14,30 +14,63 @@ export default function MMKCreator() {
   const [toolCount, setToolCount] = useState({}); // ✅ Now an object
   const [currentToolIndex, setCurrentToolIndex] = useState(0);
   const [tools, setTools] = useState([]);
-  const [mm100Text, setMm100Text] = useState(""); // ✅ Add this line
+
+  const updateTool = (property, value) => {
+    setTools((prevTools) => {
+        const opKey = step === 6 ? Number(op1) : Number(op2);
+        const updatedTools = [...prevTools];
+
+        if (!updatedTools[currentToolIndex]) {
+            // If tool doesn't exist, create it
+            updatedTools[currentToolIndex] = { op: opKey };
+        }
+
+        // Update only the specific tool property
+        updatedTools[currentToolIndex] = {
+            ...updatedTools[currentToolIndex],
+            [property]: value
+        };
+
+        return updatedTools;
+    });
+};
+
+
+
+  
+  // Place this before using formatTools in setMmkHeader
+  const formatTools = (tools) => {
+      return tools.map(tool => 
+          `[MM${tool.mmNumber}]\nTEXT="${tool.displayText}"\nChan=${flowDirection === "left-to-right" ? 
+          (tool.op === Number(op1) ? 1 : 2) : (tool.op === Number(op1) ? 2 : 1)}\nT=T${tool.toolNumber}_OP${tool.op} D${tool.cuttingEdge || 1} V${tool.axis || 1}\nFAKTOR=100\n;`
+      ).join("\n");
+  };
+
+
 
   // Move to next step
   const nextStep = () => setStep(step + 1);
 
   // Automatically store header and move forward
   const storeHeaderAndContinue = () => {
-    const lowerOp = Number(op1);
-    const higherOp = operations === 2 ? Number(op2) : null;
+      const op1Num = Number(op1);
+      const op2Num = Number(op2);
 
-    let mm1Text, mm100Text;
+      let mm1Text = "";
+      let mm100Text = "";
 
-    if (flowDirection === "left-to-right") {
-        mm1Text = `[MM1]\nTEXT="OP${lowerOp} ${workpieceNumber}"\n;\n`;
-        mm100Text = operations === 2 ? `[MM100]\nTEXT="OP${higherOp} ${workpieceNumber}"\n;\n` : "";
-    } else {
-        mm1Text = `[MM1]\nTEXT="OP${higherOp} ${workpieceNumber}"\n;\n`;
-        mm100Text = `[MM100]\nTEXT="OP${lowerOp} ${workpieceNumber}"\n;\n`;
-    }
+      if (flowDirection === "left-to-right") {
+          mm1Text = `[MM1]\nTEXT="OP${op1Num} ${workpieceNumber}"\n;\n`;
+          mm100Text = operations === 2 ? `[MM100]\nTEXT="OP${op2Num} ${workpieceNumber}"\n;\n` : "";
+      } else {
+          mm1Text = `[MM1]\nTEXT="OP${op2Num} ${workpieceNumber}"\n;\n`;
+          mm100Text = `[MM100]\nTEXT="OP${op1Num} ${workpieceNumber}"\n;\n`;
+      }
 
-    setMm100Text(mm100Text);
-    setMmkHeader(`[MM0]\nTEXT="${workpieceNumber}"\n;\n` + mm1Text);
-    nextStep();
-};
+      setMmkHeader(`[MM0]\nTEXT="${workpieceNumber}"\n;\n` + mm1Text);
+      nextStep();
+  };
+
 
   return (
     <div className="flex flex-col items-center p-6">
@@ -142,7 +175,6 @@ export default function MMKCreator() {
             />
             <button
             onClick={() => {
-                setTools([]);
                 nextStep(); // Move to OP1 Tool Input (Step 7)
                 
             }}
@@ -174,16 +206,15 @@ export default function MMKCreator() {
             className="w-full p-2 border rounded-md mb-4"
             />
             <button
-            onClick={() => {
-              setCurrentToolIndex((prevIndex) => prevIndex + 1);
-              setStep(6.2);
-              
-
-            }}
-            className="bg-blue-500 text-white px-4 py-2 rounded-md"
+              onClick={() => {
+                setCurrentToolIndex(0);
+                setStep(6.2); // ✅ Move to OP2 tool entry
+              }}
+              className="bg-blue-500 text-white px-4 py-2 rounded-md"
             >
-            Next
+              Next
             </button>
+
         </div>
         )}
 
@@ -196,7 +227,7 @@ export default function MMKCreator() {
             <h2 className="text-xl font-semibold mb-4">
                 Tool {currentToolIndex + 1} for OP{step === 6 ? op1 : op2}
             </h2>
-
+            
 
             {/* Tool Number Input */}
             <div className="mb-4">
@@ -204,13 +235,9 @@ export default function MMKCreator() {
             <input
                 type="text"
                 className="w-full p-2 border rounded-md"
-                onChange={(e) => {
-                const updatedTools = [...tools];
-                updatedTools[currentToolIndex] = { ...updatedTools[currentToolIndex], toolNumber: e.target.value, op: step === 6 ? op1 : op2 };
-                setTools(updatedTools);
-                
-                }}
+                onChange={(e) => updateTool("toolNumber", e.target.value)}
             />
+
             </div>
 
             {/* Display Text Input */}
@@ -219,12 +246,9 @@ export default function MMKCreator() {
             <input
                 type="text"
                 className="w-full p-2 border rounded-md"
-                onChange={(e) => {
-                const updatedTools = [...tools];
-                updatedTools[currentToolIndex] = { ...updatedTools[currentToolIndex], displayText: e.target.value, op: step === 6 ? op1 : op2  };
-                setTools(updatedTools);
-                }}
+                onChange={(e) => updateTool("displayText", e.target.value)}
             />
+
             </div>
 
             {/* Cutting Edge (D Number) */}
@@ -235,16 +259,10 @@ export default function MMKCreator() {
                 min="1"
                 defaultValue="1"
                 className="w-full p-2 border rounded-md"
-                onChange={(e) => {
-                const updatedTools = [...tools];
-                updatedTools[currentToolIndex] = {
-                    ...updatedTools[currentToolIndex],
-                    cuttingEdge: e.target.value || "1" ,
-                    op: step === 6 ? op1 : op2 
-                };
-                setTools(updatedTools);
-                }}
+                onChange={(e) => updateTool("cuttingEdge", e.target.value || "1")}
             />
+
+
             </div>
 
             {/* Axis (V Number) Selection */}
@@ -252,16 +270,8 @@ export default function MMKCreator() {
                 <label className="block text-lg mb-2">Select Axis (V Number):</label>
                 <select
                     className="w-full p-2 border rounded-md"
-                    onChange={(e) => {
-                    const updatedTools = [...tools];
-                    updatedTools[currentToolIndex] = { 
-                        ...updatedTools[currentToolIndex], 
-                        axis: e.target.value, // Stores only 1, 2, or 3
-                        op: step === 6 ? op1 : op2 
-                    };
-                    setTools(updatedTools);
-                    }}
-                >   
+                    onChange={(e) => updateTool("axis", e.target.value)}
+                >
                     <option value="">Select Axis</option>
                     <option value="1">X / 1</option>
                     <option value="2">Z / 2</option>
@@ -273,67 +283,72 @@ export default function MMKCreator() {
             {/* Next Tool Button */}
             <button
             onClick={() => {
-                // ✅ Separate tools for OP1 and OP2
-                let op1Tools = tools.filter(tool => String(tool.op) === String(op1));
-                let op2Tools = tools.filter(tool => String(tool.op) === String(op2));
-
-
-                // ✅ Swap OP1 and OP2 tool groups when machining is Right-to-Left
-                if (flowDirection === "right-to-left") {
-                  [op1Tools, op2Tools] = [op2Tools, op1Tools]; // ✅ Swap tool lists
-              } else {
-                  // ✅ Ensure MM1 and MM100 stay in order
-                  op1Tools = tools.filter(tool => String(tool.op) === String(op1));
-                  op2Tools = tools.filter(tool => String(tool.op) === String(op2));
-              }              
-
-                // ✅ Function to format tools into MM sections
-                const formatTools = (tools, op, toolOffset, chanValue) => {
-                    return tools.map((tool, index) => {
-                        return `[MM${index + toolOffset}]\nTEXT="${tool.displayText || ""}"\nChan=${chanValue}\nT=T${tool.toolNumber || "?"}_OP${op} D${tool.cuttingEdge || 1} V${tool.axis || "?"}\nFAKTOR=100\n;`;
-                    }).join("\n");
+                   // ✅ Apply MM numbers AFTER sorting based on flow direction
+                   const applyMMNumbers = (tools, baseMM) => {
+                    return tools
+                        .filter((tool) => tool.toolNumber) // Ensure tool exists
+                        .map((tool, index) => ({
+                            mmNumber: baseMM + index,  // Assign MM numbers separately for OP1 and OP2
+                            ...tool
+                        }));
                 };
-
-                // ✅ Assign correct Chan values based on flow direction
-                const op1Chan = flowDirection === "left-to-right" ? 1 : 2;
-                const op2Chan = flowDirection === "left-to-right" ? 2 : 1;
-
-                // ✅ Generate formatted tool sections
-                const formattedOp1Tools = formatTools(op1Tools, op1, 2, op1Chan);
-                const formattedOp2Tools = formatTools(op2Tools, op2, 101, op2Chan);
-
-                // ✅ Ensure MM100 is inserted **AFTER** OP1 tools, **BEFORE** OP2 tools
-                setMmkHeader((prevHeader) => {
-                  let updatedHeader = `[MM0]\nTEXT="${workpieceNumber}"\n;\n[MM1]\nTEXT="OP${op1} ${workpieceNumber}"\n;\n`;
-                  
-                  // ✅ Insert OP1 tools correctly
-                  updatedHeader += formattedOp1Tools;
+                
+                              
+                
+                // Assign MM numbers correctly based on flow direction
+                const op1Tools = tools.filter(tool => tool.op === Number(op1));
+                const op2Tools = tools.filter(tool => tool.op === Number(op2));
+                let formattedOp1Tools, formattedOp2Tools;
+                if (flowDirection === "left-to-right") {
+                    formattedOp1Tools = applyMMNumbers(op1Tools, 2);
+                    formattedOp2Tools = applyMMNumbers(op2Tools, 101);
+                } else {
+                    formattedOp1Tools = applyMMNumbers(op2Tools, 2);
+                    formattedOp2Tools = applyMMNumbers(op1Tools, 101);
+                }
+                // Generate MMK Output
+                setMmkHeader(() => {
+                  let updatedHeader = `[MM0]\nTEXT="${workpieceNumber}"\n;\n`;
               
-                  if (operations === 2) {
-                      updatedHeader += `[MM100]\nTEXT="OP${op2} ${workpieceNumber}"\n;\n`;
-                      updatedHeader += formattedOp2Tools; // ✅ Insert OP2 tools in correct order
+                  const op1Tools = tools.filter(t => t.op === Number(op1));
+                  const op2Tools = tools.filter(t => t.op === Number(op2));
+              
+                  if (flowDirection === "left-to-right") {
+                      updatedHeader += `[MM1]\nTEXT="OP${op1} ${workpieceNumber}"\n;\n`;
+                      updatedHeader += formatTools(op1Tools); // ✅ Ensure OP1 tools are added
+                      
+                      if (operations === 2) {
+                          updatedHeader += `[MM100]\nTEXT="OP${op2} ${workpieceNumber}"\n;\n`;
+                          updatedHeader += formatTools(op2Tools); // ✅ Ensure OP2 tools are added
+                      }
+                  } else {
+                      updatedHeader += `[MM1]\nTEXT="OP${op2} ${workpieceNumber}"\n;\n`;
+                      updatedHeader += formatTools(op2Tools); // ✅ Ensure OP2 tools are added
+                      updatedHeader += `[MM100]\nTEXT="OP${op1} ${workpieceNumber}"\n;\n`;
+                      updatedHeader += formatTools(op1Tools); // ✅ Ensure OP1 tools are added
                   }
               
                   return updatedHeader;
               });
               
-              
-
-                // ✅ Move to OP2 tool count or MMK display
-                if (step === 6 && currentToolIndex + 1 < (toolCount[op1] || 0)) {
-                  setCurrentToolIndex((prevIndex) => prevIndex + 1); // ✅ Move to next OP1 tool
-              } else if (step === 6 && currentToolIndex + 1 >= (toolCount[op1] || 0)) {
-                  setCurrentToolIndex(0); // ✅ Reset index for OP2
-                  if (operations === 2 && toolCount[op2] > 0) {
-                      setStep(5.2); // ✅ Move to OP2 tool entry
+                  // Move to the next tool input step
+                if (step === 6 && currentToolIndex + 1 < toolCount[op1]) {
+                setCurrentToolIndex((prevIndex) => prevIndex + 1);
+              } else if (step === 6 && currentToolIndex + 1 >= toolCount[op1]) {
+                  if (operations === 2) {
+                      setCurrentToolIndex(0); // Reset tool index for OP2, but do NOT reset tools
+                      setStep(5.2); // Move to OP2 tool count input
                   } else {
-                      setStep(7); // ✅ Skip to MMK output if only one operation
+                      setStep(7); // No OP2, proceed to final output
                   }
-              } else if (step === 6.2 && currentToolIndex + 1 < (toolCount[op2] || 0)) {
-                  setCurrentToolIndex((prevIndex) => prevIndex + 1); // ✅ Move to next OP2 tool
-              } else if (step === 6.2 && currentToolIndex + 1 >= (toolCount[op2] || 0)) {
-                  setStep(7); // ✅ Move to MMK Display after OP2 tools are done
+              }else if (step === 5.2) {
+                setStep(6.2); // Always move to OP2 tool entry
+              } else if (step === 6.2 && currentToolIndex + 1 < toolCount[op2]) {
+                setCurrentToolIndex((prevIndex) => prevIndex + 1);
+              } else if (step === 6.2 && currentToolIndex + 1 >= toolCount[op2]) {
+                setStep(7); // Proceed to MMK output
               }
+
           }}
             className="bg-blue-500 text-white px-4 py-2 rounded-md"
             >
