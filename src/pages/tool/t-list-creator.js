@@ -1,5 +1,7 @@
 "use client";
+import React from "react";
 import { useState } from "react";
+
 
 export default function TListCreator() {
   const [step, setStep] = useState(1);
@@ -10,7 +12,7 @@ export default function TListCreator() {
   const [selectedPostsOp1, setSelectedPostsOp1] = useState([]);
   const [selectedPostsOp2, setSelectedPostsOp2] = useState([]);
   const [currentToolIndex, setCurrentToolIndex] = useState(0);
-  const [tools, setTools] = useState([]);
+  const [setTools] = useState([]);
   const [toolInput, setToolInput] = useState({
     duploNumber: "1",
     cuttingEdge: "100",
@@ -32,7 +34,6 @@ export default function TListCreator() {
       });
     }
   };
-  
 
   const handleToolSave = () => {
     const post =
@@ -177,7 +178,7 @@ N999  RET           ; Program end ;*RO*
           </select>
           {operations === 2 && (
             <>
-              <label className="block text-lg mb-2">Flow Direction:</label>
+              <label className="block text-lg mb-2">Machining Flow:</label>
               <select
                 value={flowDirection}
                 onChange={(e) => setFlowDirection(e.target.value)}

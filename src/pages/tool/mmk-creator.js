@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -10,12 +11,10 @@ export default function MMKCreator() {
   const [op2, setOp2] = useState("");
   const [flowDirection, setFlowDirection] = useState("left-to-right");
   const [mmkHeader, setMmkHeader] = useState("");
-  const [step, setStep] = useState(1); // Controls which part of the form is visible
-  const [toolCount, setToolCount] = useState({}); // ✅ Now an object
+  const [step, setStep] = useState(1);
+  const [toolCount, setToolCount] = useState({}); // 
   const [currentToolIndex, setCurrentToolIndex] = useState(0);
-  const [tools, setTools] = useState([]);
-
-  // ✅ Local state to hold tool input before saving
+  const [_tools, setTools] = useState([]);
   const [toolInput, setToolInput] = useState({
     toolNumber: "",
     displayText: "",
@@ -23,7 +22,6 @@ export default function MMKCreator() {
     axis: "1"
   });
 
-  // Place this before using formatTools in setMmkHeader
   const formatTools = (tools) => {
       return tools.map((tool, index) => 
           `[MM${tool.mmNumber || index + 2}]\nTEXT="${tool.displayText}"\nChan=${flowDirection === "left-to-right" ? 
@@ -31,23 +29,21 @@ export default function MMKCreator() {
       ).join("\n");
   };
 
-  // Move to next step
   const nextStep = () => setStep(step + 1);
 
-  // Automatically store header and move forward
   const storeHeaderAndContinue = () => {
       const op1Num = Number(op1);
       const op2Num = Number(op2);
 
       let mm1Text = "";
-      let mm100Text = "";
+
 
       if (flowDirection === "left-to-right") {
           mm1Text = `[MM1]\nTEXT="OP${op1Num} ${workpieceNumber}"\n;\n`;
-          mm100Text = operations === 2 ? `[MM100]\nTEXT="OP${op2Num} ${workpieceNumber}"\n;\n` : "";
+        
       } else {
           mm1Text = `[MM1]\nTEXT="OP${op2Num} ${workpieceNumber}"\n;\n`;
-          mm100Text = `[MM100]\nTEXT="OP${op1Num} ${workpieceNumber}"\n;\n`;
+
       }
 
       setMmkHeader(`[MM0]\nTEXT="${workpieceNumber}"\n;\n` + mm1Text);
@@ -87,6 +83,19 @@ export default function MMKCreator() {
             <option value={1}>1 Operation</option>
             <option value={2}>2 Operations</option>
           </select>
+          {operations === 2 && (
+            <>
+              <label className="block text-lg mb-2">Machining Flow:</label>
+              <select
+                value={flowDirection}
+                onChange={(e) => setFlowDirection(e.target.value)}
+                className="w-full p-2 border rounded-md mb-4"
+              >
+                <option value="left-to-right">Left to Right</option>
+                <option value="right-to-left">Right to Left</option>
+              </select>
+            </>
+          )}
           <button onClick={nextStep} className="bg-blue-500 text-white px-4 py-2 rounded-md">
             Next
           </button>
@@ -96,52 +105,31 @@ export default function MMKCreator() {
       {/* Step 3: Ask for Operation Numbers */}
       {step === 3 && (
         <div className="w-full max-w-md">
-          <label className="block text-lg mb-2">Enter First Operation Number:</label>
+        <label className="block text-lg mb-2">Enter Operation Number(s):</label>
+        <input
+          type="text"
+          value={op1}
+          onChange={(e) => setOp1(e.target.value)}
+          className="w-full p-2 border rounded-md mb-4"
+          placeholder="Operation 1"
+        />
+        {operations === 2 && (
           <input
             type="text"
-            value={op1}
-            onChange={(e) => setOp1(e.target.value)}
+            value={op2}
+            onChange={(e) => setOp2(e.target.value)}
             className="w-full p-2 border rounded-md mb-4"
+            placeholder="Operation 2"
           />
-
-          {operations === 2 && (
-            <>
-              <label className="block text-lg mb-2">Enter Second Operation Number:</label>
-              <input
-                type="text"
-                value={op2}
-                onChange={(e) => setOp2(e.target.value)}
-                className="w-full p-2 border rounded-md mb-4"
-              />
-            </>
-          )}
-
-          <button onClick={nextStep} className="bg-blue-500 text-white px-4 py-2 rounded-md">
-            Next
-          </button>
-        </div>
+        )}
+        <button onClick={storeHeaderAndContinue} className="bg-blue-500 text-white px-4 py-2 rounded-md">
+          Next
+        </button>
+      </div>
       )}
 
-      {/* Step 4: Ask for Machining Flow */}
+      {/* Step 4: Ask how many tools for the lower operation */}
       {step === 4 && (
-        <div className="w-full max-w-md">
-          <label className="block text-lg mb-2">Machining Flow:</label>
-          <select
-            value={flowDirection}
-            onChange={(e) => setFlowDirection(e.target.value)}
-            className="w-full p-2 border rounded-md mb-4"
-          >
-            <option value="left-to-right">Left to Right</option>
-            <option value="right-to-left">Right to Left</option>
-          </select>
-          <button onClick={storeHeaderAndContinue} className="bg-blue-500 text-white px-4 py-2 rounded-md">
-            Next
-          </button>
-        </div>
-      )}
-
-      {/* Step 5: Ask how many tools for the lower operation */}
-      {step === 5 && (
         <div className="w-full max-w-md">
             <label className="block text-lg mb-2">
             How many tools are used for OP{op1}?
@@ -168,7 +156,7 @@ export default function MMKCreator() {
         </div>
         )}
 
-        {step === 5.2 && (
+        {step === 4.2 && (
         <div className="w-full max-w-md">
             <label className="block text-lg mb-2">
             How many tools are used for OP{op2}?
@@ -191,7 +179,7 @@ export default function MMKCreator() {
             <button
               onClick={() => {
                 setCurrentToolIndex(0);
-                setStep(6.2); // ✅ Move to OP2 tool entry
+                setStep(5.2); // ✅ Move to OP2 tool entry
               }}
               className="bg-blue-500 text-white px-4 py-2 rounded-md"
             >
@@ -201,14 +189,14 @@ export default function MMKCreator() {
         </div>
         )}
 
-      {/* Step 6+6.2: Tool Details Input */}
-      {((step === 6 && currentToolIndex < (toolCount[op1] || 0)) || 
-        (step === 6.2 && currentToolIndex < (toolCount[op2] || 0))) && (
+      {/* Step 5+5.2: Tool Details Input */}
+      {((step === 5 && currentToolIndex < (toolCount[op1] || 0)) || 
+        (step === 5.2 && currentToolIndex < (toolCount[op2] || 0))) && (
 
         <div className="w-full max-w-md">
 
             <h2 className="text-xl font-semibold mb-4">
-                Tool {currentToolIndex + 1} for OP{step === 6 ? op1 : op2}
+                Tool {currentToolIndex + 1} for OP{step === 5 ? op1 : op2}
             </h2>
             
 
@@ -269,7 +257,7 @@ export default function MMKCreator() {
                   }
 
                   setTools((prevTools) => {
-                    const newTool = { op: step === 6 ? Number(op1) : Number(op2), ...toolInput };
+                    const newTool = { op: step === 5 ? Number(op1) : Number(op2), ...toolInput };
                     const updatedTools = [...prevTools, newTool];
                 
                     console.log("📌 Saved Tool:", newTool);
@@ -381,22 +369,22 @@ export default function MMKCreator() {
                 
                   // ✅ Move to the next tool input step
                 setTimeout(() => {
-                  if (step === 6 && currentToolIndex + 1 < toolCount[op1]) {
+                  if (step === 5 && currentToolIndex + 1 < toolCount[op1]) {
                       setCurrentToolIndex((prevIndex) => prevIndex + 1);
-                  } else if (step === 6 && currentToolIndex + 1 >= toolCount[op1]) {
+                  } else if (step === 5 && currentToolIndex + 1 >= toolCount[op1]) {
                       if (operations === 2) {
                           setCurrentToolIndex(0);
-                          setStep(5.2); // Move to OP2 tool count input
+                          setStep(4.2); // Move to OP2 tool count input
                       } else {
-                          setStep(7); // No OP2, proceed to final output
+                          setStep(6); // No OP2, proceed to final output
                       }
-                  } else if (step === 5.2) {
+                  } else if (step === 4.2) {
                       setCurrentToolIndex(0);
-                      setStep(6.2); // Move to OP2 tool entry
-                  } else if (step === 6.2 && currentToolIndex + 1 < toolCount[op2]) {
+                      setStep(5.2); // Move to OP2 tool entry
+                  } else if (step === 5.2 && currentToolIndex + 1 < toolCount[op2]) {
                       setCurrentToolIndex((prevIndex) => prevIndex + 1);
-                  } else if (step === 6.2 && currentToolIndex + 1 >= toolCount[op2]) {
-                      setStep(7); // Proceed to MMK output
+                  } else if (step === 5.2 && currentToolIndex + 1 >= toolCount[op2]) {
+                      setStep(6); // Proceed to MMK output
                   }
                 }, 100); // Small delay ensures state updates properly
               }}
@@ -408,8 +396,8 @@ export default function MMKCreator() {
         </div>
         )}
 
-    {/* Step 7: Show MMK with Proper Notepad++ Formatting */}
-    {step === 7 && (
+    {/* Step 6: Show MMK with Proper Notepad++ Formatting */}
+    {step === 6 && (
         <div className="w-full max-w-md">
             <h2 className="text-xl font-semibold mb-4">MMK Program ✅</h2>
             <textarea
