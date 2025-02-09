@@ -2,7 +2,7 @@ import { useRouter } from 'next/navigation';
 
 const tools = [
   { id: 'mmk-creator', name: 'MMK Creator', description: 'Generate MMK programs for tool correction' },
-  { id: 'l300-probe', name: 'L300 Probe Program', description: 'Generate L300 probe programs' },
+  //{ id: 'l300-probe', name: 'L300 Probe Program', description: 'Generate L300 probe programs' },
   { id: 't-list-creator', name: 'T_List Creator', description: 'Generate T_List programs' },
 ];
 

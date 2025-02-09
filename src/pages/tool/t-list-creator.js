@@ -21,15 +21,18 @@ export default function TListCreator() {
 
   const togglePostSelection = (post, operation) => {
     if (operation === 1) {
-      setSelectedPostsOp1((prev) =>
-        prev.includes(post) ? prev.filter((p) => p !== post) : [...prev, post]
-      );
+      setSelectedPostsOp1((prev) => {
+        const updated = prev.includes(post) ? prev.filter((p) => p !== post) : [...prev, post];
+        return [...updated]; // Ensure a new array reference for state update
+      });
     } else {
-      setSelectedPostsOp2((prev) =>
-        prev.includes(post) ? prev.filter((p) => p !== post) : [...prev, post]
-      );
+      setSelectedPostsOp2((prev) => {
+        const updated = prev.includes(post) ? prev.filter((p) => p !== post) : [...prev, post];
+        return [...updated]; // Ensure a new array reference for state update
+      });
     }
   };
+  
 
   const handleToolSave = () => {
     const post =
@@ -44,7 +47,11 @@ export default function TListCreator() {
     if (currentToolIndex + 1 < selectedPostsOp1.length + selectedPostsOp2.length) {
       setCurrentToolIndex((prev) => prev + 1);
     } else {
-      generateCode([...tools, newTool]);
+      setTools((prev) => {
+        const updatedTools = [...prev, newTool];
+        generateCode(updatedTools);
+        return updatedTools;
+      });
       setStep(5);
     }
   };
@@ -134,7 +141,7 @@ N999  RET           ; Program end ;*RO*
 ;
 ;T_LOAD            ; Cycle load tool data
 ;------------------------------------------------
-;`
+;`;
 
     const toolsOp1 = tools.filter((tool) => String(tool.op) === String(op1));
     const toolsOp2 = tools.filter((tool) => String(tool.op) === String(op2));
@@ -219,14 +226,17 @@ N999  RET           ; Program end ;*RO*
           <div className="grid grid-cols-4 gap-4 mb-4">
             {Array.from({ length: 12 }, (_, i) => i + 1).map((post) => (
               <button
-                key={`op1-${post}`}
-                onClick={() => togglePostSelection(post, 1)}
-                className={`p-4 border rounded-md font-bold ${
-                  selectedPostsOp1.includes(post) ? "bg-blue-500 text-white border-2 border-blue-800" : "bg-gray-200"
-                }`}
-              >
-                Post {post}
-              </button>
+              key={`op1-${post}`}
+              onClick={() => togglePostSelection(post, 1)}
+              className={`p-4 border rounded-md font-bold transition-all ${
+                selectedPostsOp1.includes(post)
+                  ? "bg-blue-500 text-white border-4 border-blue-800 scale-110"
+                  : "bg-gray-200 border border-gray-400 hover:bg-gray-300"
+              }`}
+            >
+              Post {post} {selectedPostsOp1.includes(post) ? "✔" : ""}
+            </button>
+            
             ))}
           </div>
           {operations === 2 && (
@@ -235,14 +245,17 @@ N999  RET           ; Program end ;*RO*
               <div className="grid grid-cols-4 gap-4">
                 {Array.from({ length: 12 }, (_, i) => i + 1).map((post) => (
                   <button
-                    key={`op2-${post}`}
-                    onClick={() => togglePostSelection(post, 2)}
-                    className={`p-4 border rounded-md font-bold ${
-                      selectedPostsOp2.includes(post) ? "bg-green-500 text-white border-2 border-green-800" : "bg-gray-200"
-                    }`}
-                  >
-                    Post {post}
-                  </button>
+                  key={`op2-${post}`}
+                  onClick={() => togglePostSelection(post, 2)}
+                  className={`p-4 border rounded-md font-bold transition-all ${
+                    selectedPostsOp2.includes(post)
+                      ? "bg-green-500 text-white border-4 border-green-800 scale-110"
+                      : "bg-gray-200 border border-gray-400 hover:bg-gray-300"
+                  }`}
+                >
+                  Post {post} {selectedPostsOp2.includes(post) ? "✔" : ""}
+                </button>
+                
                 ))}
               </div>
             </>
