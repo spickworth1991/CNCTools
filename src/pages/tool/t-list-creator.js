@@ -56,7 +56,7 @@ export default function TListCreator() {
     const post =
       currentToolIndex < selectedPostsOp1.length
         ? selectedPostsOp1[currentToolIndex]
-        : selectedPostsOp2[currentToolIndex - selectedPostsOp1.length];
+        : selectedPostsOp2[currentToolIndex - selectedPostsOp2.length];
     const op = currentToolIndex < selectedPostsOp1.length ? op1 : op2;
     const newTool = { post, op, ...toolInput };
     setTools((prev) => [...prev, newTool]);
