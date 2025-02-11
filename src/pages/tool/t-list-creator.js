@@ -136,7 +136,8 @@ export default function TListCreator() {
     } else if (operations === 2) {
       if (step === 5) {
         console.log("Im Here handleToolSave op 2 3");
-
+        setCurrentToolIndex(0); // Reset for Op2
+        console.log("Im Here handleToolSave op 2 C");
         setStep(4.2); // Move to Op2 tool input
         console.log("Im Here handleToolSave op 2 D");
       }else if (step === 5.2) {
