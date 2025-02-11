@@ -50,7 +50,7 @@ export default function TListCreator() {
   };
 
   const handleSaveTool2 = () => {
-    const post =selectedPostsOp2[currentToolIndex - selectedPostsOp2.length];
+    const post =selectedPostsOp2[currentToolIndex - selectedPostsOp1.length];
     const op = op2;
     const newTool = { post, op, ...toolInput };
     setTools((prev) => [...prev, newTool]);
@@ -122,7 +122,8 @@ export default function TListCreator() {
     } else if (operations === 2) {
       if (step === 5) {
         console.log("Im Here handleToolSave op 2 3");
-
+        setCurrentToolIndex(0); // Reset for Op2
+        console.log("Im Here handleToolSave op 2 C");
         setStep(4.2); // Move to Op2 tool input
         console.log("Im Here handleToolSave op 2 D");
       }else if (step === 5.2) {
@@ -251,7 +252,7 @@ export default function TListCreator() {
       if (probePost) {
         const probeCode = `
   ;------------------------------------------------
-  ; Probe
+  ; Probe poost ${probePost}
   ;------------------------------------------------
   CR_T[2]=${probePost}           ; Post number
   CS_T[1]="PROBE_OP${probeOp}"   ; Tool name
