@@ -31,18 +31,23 @@ export default function TListCreator() {
     const op = currentToolIndex < selectedPostsOp1.length ? op1 : op2;
     const newTool = { post, op, ...toolInput };
     setTools((prev) => [...prev, newTool]);
+    console.log("Im Here handleSaveTool1 1");
     console.log("tools", _tools);
     console.log("newTool", newTool);
     if (currentToolIndex + 1 < selectedPostsOp1.length) {
       setCurrentToolIndex((prev) => prev + 1);
+      console.log("Im Here handleSaveTool1 2");
     } else if (isProbeSelected1 && currentToolIndex + 1 === selectedPostsOp1.length && step !== 5) {
+      console.log("Im Here handleSaveTool1 3");
       setStep(5);
     } else {
+      console.log("Im Here handleSaveTool1 4");
       setTools((prev) => {
         const updatedTools = [...prev, newTool];
         generateCode(updatedTools);
         return updatedTools;
       });
+      console.log("Im Here handleSaveTool1 5");
       setStep(4.2);
     }
   };
@@ -55,18 +60,23 @@ export default function TListCreator() {
     const op = currentToolIndex < selectedPostsOp1.length ? op1 : op2;
     const newTool = { post, op, ...toolInput };
     setTools((prev) => [...prev, newTool]);
+    console.log("Im Here handleSaveTool2 1");
     console.log("tools", _tools);
     console.log("newTool", newTool);
     if (currentToolIndex + 1 < selectedPostsOp2.length) {
+      console.log("Im Here handleSaveTool2 2");
       setCurrentToolIndex((prev) => prev + 1); // Continue Op2 tools
     } else if (isProbeSelected2 && currentToolIndex + 1 === selectedPostsOp2.length && step !== 5.2) {
       setStep(5.2); // Move to Probe Op2 selection
+      console.log("Im Here handleSaveTool2 3");
     } else {
+      console.log("Im Here handleSaveTool2 4");
       setTools((prev) => {
         const updatedTools = [...prev, newTool];
         generateCode(updatedTools);
         return updatedTools;
       });
+      console.log("Im Here handleSaveTool2 5");
       setStep(6); // Final step after tools & probe selection
     }
   }
@@ -104,25 +114,40 @@ export default function TListCreator() {
   
     if (operations === 1) {
       if (currentToolIndex + 1 < selectedPostsOp1.length) {
+        console.log("Im Here handleToolSave op 1 1");
         setCurrentToolIndex((prev) => prev + 1);
+        console.log("Im Here handleToolSave op 1 A");
       } else if (isProbeSelected1) {
+        console.log("Im Here handleToolSave op 1 2");
         setStep(5);  // Go to probe step before generating
+        console.log("Im Here handleToolSave op 1 B");
       } else {
+        console.log("Im Here handleToolSave op 1 3");
         setTools((prev) => {
           const updatedTools = [...prev, newTool];
           generateCode(updatedTools);
+          console.log("Im Here handleToolSave op 1 C");
           return updatedTools;
         });
+        console.log("Im Here handleToolSave op 1 4");
         setStep(6);
+        console.log("Im Here handleToolSave op 1 D");
       }
     } else if (operations === 2) {
       if (currentToolIndex + 1 < selectedPostsOp1.length) {
+        console.log("Im Here handleToolSave op 2 1");
         setCurrentToolIndex((prev) => prev + 1); // Continue Op1 tools
+        console.log("Im Here handleToolSave op 2 A");
       } else if (step === 4) {
+        console.log("Im Here handleToolSave op 2 2");
         setStep(5); // Go to Probe selection for Op1
+        console.log("Im Here handleToolSave op 2 B");
       } else {
+        console.log("Im Here handleToolSave op 2 3");
         setCurrentToolIndex(0); // Reset for Op2
+        console.log("Im Here handleToolSave op 2 C");
         setStep(4.2); // Move to Op2 tool input
+        console.log("Im Here handleToolSave op 2 D");
       }
     }
     
