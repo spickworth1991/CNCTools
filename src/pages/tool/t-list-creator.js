@@ -24,11 +24,8 @@ export default function TListCreator() {
   const [generatedCode, setGeneratedCode] = useState({ tlist1: "", tlist2: "" });
 
   const handleSaveTool = () => {
-    const post =
-      currentToolIndex < selectedPostsOp1.length
-        ? selectedPostsOp1[currentToolIndex]
-        : selectedPostsOp2[currentToolIndex - selectedPostsOp1.length];
-    const op = currentToolIndex < selectedPostsOp1.length ? op1 : op2;
+    const post =selectedPostsOp1[currentToolIndex];
+    const op = op1;
     const newTool = { post, op, ...toolInput };
     setTools((prev) => [...prev, newTool]);
     console.log("Im Here handleSaveTool1 1");
@@ -53,11 +50,8 @@ export default function TListCreator() {
   };
 
   const handleSaveTool2 = () => {
-    const post =
-      currentToolIndex < selectedPostsOp1.length
-        ? selectedPostsOp1[currentToolIndex]
-        : selectedPostsOp2[currentToolIndex - selectedPostsOp2.length];
-    const op = currentToolIndex < selectedPostsOp1.length ? op1 : op2;
+    const post =selectedPostsOp2[currentToolIndex - selectedPostsOp2.length];
+    const op = op2;
     const newTool = { post, op, ...toolInput };
     setTools((prev) => [...prev, newTool]);
     console.log("Im Here handleSaveTool2 1");
