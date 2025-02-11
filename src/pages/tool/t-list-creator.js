@@ -231,38 +231,41 @@ export default function TListCreator() {
   ;`;
   
     const generateToolData = (toolsForOp, probePost, probeOp) => {
-      let toolCode = toolsForOp
+      const uniqueTools = [...new Map(toolsForOp.map(tool => [tool.post, tool])).values()]; // ✅ Remove duplicates
+
+      let toolCode = uniqueTools
         .map(
           (tool) => `
-  ;------------------------------------------------
-  ; Tool post ${tool.post}
-  ;------------------------------------------------
-  CR_T[2]=${tool.post}          ; Post number
-  CS_T[1]="T${tool.post}_OP${tool.op}"   ; Tool name
-  CR_T[3]=${tool.duploNumber}           ; Duplo number (main/spare tool)
-  CR_T[5]=1           ; Quantity monitoring (0=manual, 1=activate, 2=deselect)
-  CR_T[13]=${tool.cuttingEdge}        ; Cutting edge 1: number of pieces nominal value
-  CR_T[14]=10         ; Cutting edge 1: number of pieces prewarning limit
-  T_LOAD              ; Cycle load Tool data ;*RO*
-  `
+      ;------------------------------------------------
+      ; Tool post ${tool.post}
+      ;------------------------------------------------
+      CR_T[2]=${tool.post}          ; Post number
+      CS_T[1]="T${tool.post}_OP${tool.op}"   ; Tool name
+      CR_T[3]=${tool.duploNumber}           ; Duplo number (main/spare tool)
+      CR_T[5]=1           ; Quantity monitoring (0=manual, 1=activate, 2=deselect)
+      CR_T[13]=${tool.cuttingEdge}        ; Cutting edge 1: number of pieces nominal value
+      CR_T[14]=10         ; Cutting edge 1: number of pieces prewarning limit
+      T_LOAD              ; Cycle load Tool data ;*RO*
+      `
         )
         .join("\n");
+
   
       // Add Probe Code if Selected
-      if (probePost) {
+      if (probePost && probeOp) {
         const probeCode = `
-  ;------------------------------------------------
-  ; Probe poost ${probePost}
-  ;------------------------------------------------
-  CR_T[2]=${probePost}           ; Post number
-  CS_T[1]="PROBE_OP${probeOp}"   ; Tool name
-  CR_T[3]=1           ; Duplo number (main/spare tool) {Always 1 for probe}
-  CR_T[5]=0           ; Quantity monitoring (0=manual, 1=activate, 2=deselect) {Always 0 for probe}
-  CR_T[13]=100        ; Cutting edge 1: number of pieces nominal value {Always 100 for probe}
-  CR_T[14]=10         ; Cutting edge 1: number of pieces prewarning limit {Always 10 for probe}
-  T_LOAD              ; Cycle load Tool data ;*RO*
-  `;
-  
+      ;------------------------------------------------
+      ; Probe post ${probePost}
+      ;------------------------------------------------
+      CR_T[2]=${probePost}           ; Post number
+      CS_T[1]="PROBE_OP${probeOp}"   ; Tool name
+      CR_T[3]=1           ; Duplo number (main/spare tool) {Always 1 for probe}
+      CR_T[5]=0           ; Quantity monitoring (0=manual, 1=activate, 2=deselect) {Always 0 for probe}
+      CR_T[13]=100        ; Cutting edge 1: number of pieces nominal value {Always 100 for probe}
+      CR_T[14]=10         ; Cutting edge 1: number of pieces prewarning limit {Always 10 for probe}
+      T_LOAD              ; Cycle load Tool data ;*RO*
+      `;
+      
         toolCode += probeCode;
       }
   
