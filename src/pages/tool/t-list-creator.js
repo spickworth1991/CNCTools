@@ -134,20 +134,23 @@ export default function TListCreator() {
         console.log("Im Here handleToolSave op 1 D");
       }
     } else if (operations === 2) {
-      if (currentToolIndex + 1 < selectedPostsOp1.length) {
-        console.log("Im Here handleToolSave op 2 1");
-        setCurrentToolIndex((prev) => prev + 1); // Continue Op1 tools
-        console.log("Im Here handleToolSave op 2 A");
-      } else if (step === 4) {
-        console.log("Im Here handleToolSave op 2 2");
-        setStep(5); // Go to Probe selection for Op1
-        console.log("Im Here handleToolSave op 2 B");
-      } else {
+      if (step === 5) {
         console.log("Im Here handleToolSave op 2 3");
         setCurrentToolIndex(0); // Reset for Op2
         console.log("Im Here handleToolSave op 2 C");
         setStep(4.2); // Move to Op2 tool input
         console.log("Im Here handleToolSave op 2 D");
+      }else if (step === 5.2) {
+        console.log("Im Here handleToolSave op 2 4");
+        setTools((prev) => {
+          const updatedTools = [...prev, newTool];
+          generateCode(updatedTools);
+          console.log("Im Here handleToolSave op 2 E");
+          return updatedTools;
+        });
+        console.log("Im Here handleToolSave op 2 5");
+        setStep(6);
+        console.log("Im Here handleToolSave op 2 F");
       }
     }
     
