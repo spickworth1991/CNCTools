@@ -34,7 +34,7 @@ export default function TListCreator() {
     if (currentToolIndex + 1 < selectedPostsOp1.length) {
       setCurrentToolIndex((prev) => prev + 1);
       console.log("Im Here handleSaveTool1 2");
-    } else if (isProbeSelected1 && currentToolIndex + 1 === selectedPostsOp1.length && step !== 5) {
+    } else if (isProbeSelected1 && step !== 5) {
       console.log("Im Here handleSaveTool1 3");
       setStep(5);
     } else if (operations === 1) {
