@@ -28,49 +28,35 @@ export default function TListCreator() {
     const op = op1;
     const newTool = { post, op, ...toolInput };
     setTools((prev) => [...prev, newTool]);
-    console.log("Im Here handleSaveTool1 1");
-    console.log("tools", _tools);
-    console.log("newTool", newTool);
     if (currentToolIndex + 1 < selectedPostsOp1.length) {
       setCurrentToolIndex((prev) => prev + 1);
-      console.log("Im Here handleSaveTool1 2");
     } else if (isProbeSelected1 && currentToolIndex + 1 === selectedPostsOp1.length && step !== 5) {
-      console.log("Im Here handleSaveTool1 3");
       setStep(5);
     } else if (operations === 1) {
-      console.log("Im Here handleSaveTool1 4");
       setTools((prev) => {
         const updatedTools = [...prev, newTool];
         generateCode(updatedTools);
         return updatedTools;
       });
-      console.log("Im Here handleSaveTool1 5");
       setStep(4.2);
     }
   };
 
   const handleSaveTool2 = () => {
-    const post =selectedPostsOp2[currentToolIndex - selectedPostsOp1.length];
+    const post =selectedPostsOp2[currentToolIndex];
     const op = op2;
     const newTool = { post, op, ...toolInput };
     setTools((prev) => [...prev, newTool]);
-    console.log("Im Here handleSaveTool2 1");
-    console.log("tools", _tools);
-    console.log("newTool", newTool);
     if (currentToolIndex + 1 < selectedPostsOp2.length) {
-      console.log("Im Here handleSaveTool2 2");
       setCurrentToolIndex((prev) => prev + 1); // Continue Op2 tools
     } else if (isProbeSelected2 && currentToolIndex + 1 === selectedPostsOp2.length && step !== 5.2) {
       setStep(5.2); // Move to Probe Op2 selection
-      console.log("Im Here handleSaveTool2 3");
     } else {
-      console.log("Im Here handleSaveTool2 4");
       setTools((prev) => {
         const updatedTools = [...prev, newTool];
         generateCode(updatedTools);
         return updatedTools;
       });
-      console.log("Im Here handleSaveTool2 5");
       setStep(6); // Final step after tools & probe selection
     }
   }
@@ -98,45 +84,31 @@ export default function TListCreator() {
         ? selectedPostsOp1[currentToolIndex]
         : selectedPostsOp2[currentToolIndex - selectedPostsOp1.length];
     const op = currentToolIndex < selectedPostsOp1.length ? op1 : op2;
-    console.log("post", post);
-    console.log("op", op);
-  
+
     const newTool = { post, op, ...toolInput };
     setTools((prev) => [...prev, newTool]);
-    console.log("tools", _tools);
-    console.log("newTool", newTool);
+
   
     if (operations === 1) {
       if (step === 5) {
-        console.log("Im Here handleToolSave op 1 3");
         setTools((prev) => {
           const updatedTools = [...prev, newTool];
           generateCode(updatedTools);
-          console.log("Im Here handleToolSave op 1 C");
           return updatedTools;
         });
-        console.log("Im Here handleToolSave op 1 4");
         setStep(6);
-        console.log("Im Here handleToolSave op 1 D");
       }
     } else if (operations === 2) {
       if (step === 5) {
-        console.log("Im Here handleToolSave op 2 3");
         setCurrentToolIndex(0); // Reset for Op2
-        console.log("Im Here handleToolSave op 2 C");
         setStep(4.2); // Move to Op2 tool input
-        console.log("Im Here handleToolSave op 2 D");
       }else if (step === 5.2) {
-        console.log("Im Here handleToolSave op 2 4");
         setTools((prev) => {
           const updatedTools = [...prev, newTool];
           generateCode(updatedTools);
-          console.log("Im Here handleToolSave op 2 E");
           return updatedTools;
         });
-        console.log("Im Here handleToolSave op 2 5");
         setStep(6);
-        console.log("Im Here handleToolSave op 2 F");
       }
     }
     
@@ -145,90 +117,89 @@ export default function TListCreator() {
   
 
   const generateCode = (tools) => {
-    const generateHeaderOp1 = () => `
-  ;                - EMAG -
-  ;------------------------------------------------
-  ; Siemens tool management
-  ; Tool list: 1st tool carrier
-  ;------------------------------------------------
-  ;PROGRAM NAME:          T_LIST1
-  ;VERSION:               08.02.02 Jul 03,2018
-  ;AUTHOR:                SK
-  ;MACHINE TYPE:          ALL
-  ;MACHINE NUMBER:
-  ;SVN $Id: T_LIST1.ARC 3408 2019-06-27 07:49:50Z skastrati $ ;*RO*
-  ;SVN $HeadURL: file:///T:/ESC/SVNRepository/SIEMENS/_NC/840D_V8/tags/3.6.2/999_ModularStandard/VL150Duo/01_Generally/02_UserProg_English/T_LIST1.ARC $ ;*RO*;*HD*
-  ;------------------------------------------------
-  CR_T[1]=1           ; Number tool carrier ;*RO*
-  `;
+    const generateHeaderOp1 = () => `;                - EMAG -
+;------------------------------------------------
+; Siemens tool management
+; Tool list: 1st tool carrier
+;------------------------------------------------
+;PROGRAM NAME:          T_LIST1
+;VERSION:               08.02.02 Jul 03,2018
+;AUTHOR:                SK
+;MACHINE TYPE:          ALL
+;MACHINE NUMBER:
+;SVN $Id: T_LIST1.ARC 3408 2019-06-27 07:49:50Z skastrati $ ;*RO*
+;SVN $HeadURL: file:///T:/ESC/SVNRepository/SIEMENS/_NC/840D_V8/tags/3.6.2/999_ModularStandard/VL150Duo/01_Generally/02_UserProg_English/T_LIST1.ARC $ ;*RO*;*HD*
+;------------------------------------------------
+CR_T[1]=1           ; Number tool carrier ;*RO*
+`;
   
     const generateHeaderOp2 = () => `
-  ;                - EMAG -
-  ;------------------------------------------------
-  ; Siemens tool management
-  ; Tool list: 2nd tool carrier
-  ;------------------------------------------------
-  ;PROGRAM NAME:          T_LIST2
-  ;VERSION:               08.02.02 Jul 03,2018
-  ;AUTHOR:                SK
-  ;MACHINE TYPE:          ALL
-  ;MACHINE NUMBER:
-  ;SVN $Id: T_LIST2.ARC 3408 2019-06-27 07:49:50Z skastrati $ ;*RO*
-  ;SVN $HeadURL: file:///T:/ESC/SVNRepository/SIEMENS/_NC/840D_V8/tags/3.6.2/999_ModularStandard/VL150Duo/01_Generally/02_UserProg_English/T_LIST2.ARC $ ;*RO*;*HD*
-  ;------------------------------------------------
-  CR_T[1]=2           ; Number tool carrier ;*RO*
-  `;
+;                - EMAG -
+;------------------------------------------------
+; Siemens tool management
+; Tool list: 2nd tool carrier
+;------------------------------------------------
+;PROGRAM NAME:          T_LIST2
+;VERSION:               08.02.02 Jul 03,2018
+;AUTHOR:                SK
+;MACHINE TYPE:          ALL
+;MACHINE NUMBER:
+;SVN $Id: T_LIST2.ARC 3408 2019-06-27 07:49:50Z skastrati $ ;*RO*
+;SVN $HeadURL: file:///T:/ESC/SVNRepository/SIEMENS/_NC/840D_V8/tags/3.6.2/999_ModularStandard/VL150Duo/01_Generally/02_UserProg_English/T_LIST2.ARC $ ;*RO*;*HD*
+;------------------------------------------------
+CR_T[1]=2           ; Number tool carrier ;*RO*
+`;
   
     const footer = `
-  ;------------------------------------------------
-  N999  RET           ; Program end ;*RO*
-  ;------------------------------------------------
-  ;
-  ;
-  ; Sample data
-  ;------------------------------------------------
-  ; Tool Post Example
-  ;------------------------------------------------
-  ;CR_T[2]=1         ; Post number
-  ;CS_T[1]="4711"    ; Tool name
-  ;CR_T[3]=1         ; Duplo number (main/spare tool)
-  ;CR_T[5]=1         ; Quantity monitoring (0=manual, 1=activate, 2=deselect)
-  ;CR_T[13]=1000     ; Cutting edge 1: number of pieces nominal value
-  ;CR_T[14]=100      ; Cutting edge 1: number of pieces prewarning limit
-  ;T_LOAD
-  ;-------------------Legend-----------------------
-  ;CR_T[2]=1         ; Post number
-  ;CS_T[1]="4711"    ; Tool name
-  ;CR_T[3]=1         ; Duplo number (main/spare tool)
-  ;CR_T[9]=1         ; Control cut ON/OFF
-  ;
-  ;CR_T[4]=1         ; Tool life monitoring (0=manual, 1=activate, 2=deselect)
-  ;CR_T[11]=100      ; Cutting edge 1: tool life nominal value
-  ;CR_T[12]=10       ; Cutting edge 1: tool life prewarning limit
-  ;CR_T[21]=100      ; Cutting edge 2: tool life nominal value
-  ;CR_T[22]=10       ; Cutting edge 2: tool life prewarning limit
-  ;CR_T[x1]=100      ; Cutting edge x: tool life nominal value
-  ;CR_T[x2]=10       ; Cutting edge x: tool life prewarning limit
-  ;
-  ;CR_T[5]=1         ; Quantity monitoring (0=manual, 1=activate, 2=deselect)
-  ;CR_T[13]=1000     ; Cutting edge 1: number of pieces nominal value
-  ;CR_T[14]=100      ; Cutting edge 1: number of pieces prewarning limit
-  ;CR_T[23]=1000     ; Cutting edge 2: number of pieces nominal value
-  ;CR_T[24]=100      ; Cutting edge 2: number of pieces prewarning limit
-  ;CR_T[x3]=1000     ; Cutting edge x: number of pieces nominal value
-  ;CR_T[x4]=100      ; Cutting edge x: number of pieces prewarning limit
-  ;
-  ;CR_T[6]=1         ; Wear monitoring (0=manual, 1=activate, 2=deselect)
-  ;CR_T[15]=0        ; Cutting edge 1: wear nominal value
-  ;CR_T[16]=0        ; Cutting edge 1: wear prewarning limit
-  ;CR_T[25]=0        ; Cutting edge 2: wear nominal value
-  ;CR_T[26]=0        ; Cutting edge 2: wear prewarning limit
-  ;CR_T[x5]=0        ; Cutting edge x: wear nominal value
-  ;CR_T[x6]=0        ; Cutting edge x: wear prewarning limit
-  ;
-  ;T_LOAD            ; Cycle load tool data
-  ;------------------------------------------------
-  ;`;
+;------------------------------------------------
+N999  RET           ; Program end ;*RO*
+;------------------------------------------------
+;
+;
+; Sample data
+;------------------------------------------------
+; Tool Post Example
+;------------------------------------------------
+;CR_T[2]=1         ; Post number
+;CS_T[1]="4711"    ; Tool name
+;CR_T[3]=1         ; Duplo number (main/spare tool)
+;CR_T[5]=1         ; Quantity monitoring (0=manual, 1=activate, 2=deselect)
+;CR_T[13]=1000     ; Cutting edge 1: number of pieces nominal value
+;CR_T[14]=100      ; Cutting edge 1: number of pieces prewarning limit
+;T_LOAD
+;-------------------Legend-----------------------
+;CR_T[2]=1         ; Post number
+;CS_T[1]="4711"    ; Tool name
+;CR_T[3]=1         ; Duplo number (main/spare tool)
+;CR_T[9]=1         ; Control cut ON/OFF
+;
+;CR_T[4]=1         ; Tool life monitoring (0=manual, 1=activate, 2=deselect)
+;CR_T[11]=100      ; Cutting edge 1: tool life nominal value
+;CR_T[12]=10       ; Cutting edge 1: tool life prewarning limit
+;CR_T[21]=100      ; Cutting edge 2: tool life nominal value
+;CR_T[22]=10       ; Cutting edge 2: tool life prewarning limit
+;CR_T[x1]=100      ; Cutting edge x: tool life nominal value
+;CR_T[x2]=10       ; Cutting edge x: tool life prewarning limit
+;
+;CR_T[5]=1         ; Quantity monitoring (0=manual, 1=activate, 2=deselect)
+;CR_T[13]=1000     ; Cutting edge 1: number of pieces nominal value
+;CR_T[14]=100      ; Cutting edge 1: number of pieces prewarning limit
+;CR_T[23]=1000     ; Cutting edge 2: number of pieces nominal value
+;CR_T[24]=100      ; Cutting edge 2: number of pieces prewarning limit
+;CR_T[x3]=1000     ; Cutting edge x: number of pieces nominal value
+;CR_T[x4]=100      ; Cutting edge x: number of pieces prewarning limit
+;
+;CR_T[6]=1         ; Wear monitoring (0=manual, 1=activate, 2=deselect)
+;CR_T[15]=0        ; Cutting edge 1: wear nominal value
+;CR_T[16]=0        ; Cutting edge 1: wear prewarning limit
+;CR_T[25]=0        ; Cutting edge 2: wear nominal value
+;CR_T[26]=0        ; Cutting edge 2: wear prewarning limit
+;CR_T[x5]=0        ; Cutting edge x: wear nominal value
+;CR_T[x6]=0        ; Cutting edge x: wear prewarning limit
+;
+;T_LOAD            ; Cycle load tool data
+;------------------------------------------------
+;`;
   
     const generateToolData = (toolsForOp, probePost, probeOp) => {
       const uniqueTools = [...new Map(toolsForOp.map(tool => [tool.post, tool])).values()]; // ✅ Remove duplicates
@@ -236,17 +207,17 @@ export default function TListCreator() {
       let toolCode = uniqueTools
         .map(
           (tool) => `
-      ;------------------------------------------------
-      ; Tool post ${tool.post}
-      ;------------------------------------------------
-      CR_T[2]=${tool.post}          ; Post number
-      CS_T[1]="T${tool.post}_OP${tool.op}"   ; Tool name
-      CR_T[3]=${tool.duploNumber}           ; Duplo number (main/spare tool)
-      CR_T[5]=1           ; Quantity monitoring (0=manual, 1=activate, 2=deselect)
-      CR_T[13]=${tool.cuttingEdge}        ; Cutting edge 1: number of pieces nominal value
-      CR_T[14]=10         ; Cutting edge 1: number of pieces prewarning limit
-      T_LOAD              ; Cycle load Tool data ;*RO*
-      `
+;------------------------------------------------
+; Tool post ${tool.post}
+;------------------------------------------------
+CR_T[2]=${tool.post}          ; Post number
+CS_T[1]="T${tool.post}_OP${tool.op}"   ; Tool name
+CR_T[3]=${tool.duploNumber}           ; Duplo number (main/spare tool)
+CR_T[5]=1           ; Quantity monitoring (0=manual, 1=activate, 2=deselect)
+CR_T[13]=${tool.cuttingEdge}        ; Cutting edge 1: number of pieces nominal value
+CR_T[14]=10         ; Cutting edge 1: number of pieces prewarning limit
+T_LOAD              ; Cycle load Tool data ;*RO*
+`
         )
         .join("\n");
 
@@ -254,17 +225,17 @@ export default function TListCreator() {
       // Add Probe Code if Selected
       if (probePost && probeOp) {
         const probeCode = `
-      ;------------------------------------------------
-      ; Probe post ${probePost}
-      ;------------------------------------------------
-      CR_T[2]=${probePost}           ; Post number
-      CS_T[1]="PROBE_OP${probeOp}"   ; Tool name
-      CR_T[3]=1           ; Duplo number (main/spare tool) {Always 1 for probe}
-      CR_T[5]=0           ; Quantity monitoring (0=manual, 1=activate, 2=deselect) {Always 0 for probe}
-      CR_T[13]=100        ; Cutting edge 1: number of pieces nominal value {Always 100 for probe}
-      CR_T[14]=10         ; Cutting edge 1: number of pieces prewarning limit {Always 10 for probe}
-      T_LOAD              ; Cycle load Tool data ;*RO*
-      `;
+;------------------------------------------------
+; Probe post ${probePost}
+;------------------------------------------------
+CR_T[2]=${probePost}           ; Post number
+CS_T[1]="PROBE_OP${probeOp}"   ; Tool name
+CR_T[3]=1           ; Duplo number (main/spare tool) {Always 1 for probe}
+CR_T[5]=0           ; Quantity monitoring (0=manual, 1=activate, 2=deselect) {Always 0 for probe}
+CR_T[13]=100        ; Cutting edge 1: number of pieces nominal value {Always 100 for probe}
+CR_T[14]=10         ; Cutting edge 1: number of pieces prewarning limit {Always 10 for probe}
+T_LOAD              ; Cycle load Tool data ;*RO*
+`;
       
         toolCode += probeCode;
       }
@@ -280,13 +251,13 @@ export default function TListCreator() {
     const tlist1 =
       generateHeaderOp1(op1IsFirst ? 1 : 2) +
       generateToolData(op1IsFirst ? toolsOp1 : toolsOp2, 
-        isProbeSelected1 ? selectedProbePostOp1 : null, op1) +
+        op1IsFirst ? (isProbeSelected1 ? selectedProbePostOp1 : null) : (isProbeSelected2 ? selectedProbePostOp2 : null), op1IsFirst ? op1 : op2) +
       footer;
   
     const tlist2 =
       generateHeaderOp2(op1IsFirst ? 2 : 1) +
       generateToolData(op1IsFirst ? toolsOp2 : toolsOp1, 
-        isProbeSelected2 ? selectedProbePostOp2 : null, op2) +
+        op1IsFirst ? (isProbeSelected2 ? selectedProbePostOp2 : null) : (isProbeSelected1 ? selectedProbePostOp1 : null), op1IsFirst ? op2 : op1) +
       footer;
   
     setGeneratedCode({ tlist1, tlist2 });

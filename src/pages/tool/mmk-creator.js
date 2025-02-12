@@ -12,22 +12,44 @@ export default function MMKCreator() {
   const [flowDirection, setFlowDirection] = useState("left-to-right");
   const [mmkHeader, setMmkHeader] = useState("");
   const [step, setStep] = useState(1);
-  const [toolCount, setToolCount] = useState({}); // 
   const [currentToolIndex, setCurrentToolIndex] = useState(0);
   const [_tools, setTools] = useState([]);
+  const [selectedPostsOp1, setSelectedPostsOp1] = useState([]);
+  const [selectedPostsOp2, setSelectedPostsOp2] = useState([]);
+  const currentPost = step === 5 ? selectedPostsOp1[currentToolIndex] : selectedPostsOp2[currentToolIndex];
   const [toolInput, setToolInput] = useState({
-    toolNumber: "",
     displayText: "",
     cuttingEdge: "1",
     axis: "1"
   });
 
+  const togglePostSelection = (post, operation) => {
+    if (operation === 1) {
+      setSelectedPostsOp1((prev) => {
+        const updated = prev.includes(post) ? prev.filter((p) => p !== post) : [...prev, post];
+        return [...updated]; // Ensure a new array reference for state update
+      });
+    } else {
+      setSelectedPostsOp2((prev) => {
+        const updated = prev.includes(post) ? prev.filter((p) => p !== post) : [...prev, post];
+        return [...updated]; // Ensure a new array reference for state update
+      });
+    }
+  };
+  
+
   const formatTools = (tools) => {
       return tools.map((tool, index) => 
-          `[MM${tool.mmNumber || index + 2}]\nTEXT="${tool.displayText}"\nChan=${flowDirection === "left-to-right" ? 
-          (tool.op === Number(op1) ? 1 : 2) : (tool.op === Number(op1) ? 2 : 1)}\nT=T${tool.toolNumber}_OP${tool.op} D${tool.cuttingEdge || 1} V${tool.axis || 1}\nFAKTOR=100\n;`
+          `[MM${tool.mmNumber || index + 2}]
+  TEXT="${tool.displayText}"
+  Chan=${flowDirection === "left-to-right" ? 
+      (tool.op === Number(op1) ? 1 : 2) : (tool.op === Number(op1) ? 2 : 1)}
+  T=T${tool.post || tool.toolNumber}_OP${tool.op} D${tool.cuttingEdge || 1} V${tool.axis || 1}
+  FAKTOR=100
+  ;`
       ).join("\n");
   };
+
 
   const nextStep = () => setStep(step + 1);
 
@@ -128,88 +150,65 @@ export default function MMKCreator() {
       </div>
       )}
 
-      {/* Step 4: Ask how many tools for the lower operation */}
       {step === 4 && (
         <div className="w-full max-w-md">
-            <label className="block text-lg mb-2">
-            How many tools are used for OP{op1}?
-            </label>
-            <input
-              type="number"
-              min="1"
-              value={toolCount[op1] || ""}
-              onChange={(e) => setToolCount((prev) => ({
-                ...prev,
-                [op1]: Number(e.target.value) || 1 // ✅ Default to 1 if empty
-              }))}              
-            className="w-full p-2 border rounded-md mb-4"
-            />
-            <button
-            onClick={() => {
-                nextStep(); // Move to OP1 Tool Input (Step 7)
-                
-            }}
-            className="bg-blue-500 text-white px-4 py-2 rounded-md"
-            >
+          <h2 className="text-xl font-semibold mb-4">Select Tool Posts</h2>
+          <h3 className="font-bold mb-2">Operation {op1}</h3>
+          <div className="grid grid-cols-4 gap-4 mb-4">
+            {Array.from({ length: 12 }, (_, i) => i + 1).map((post) => (
+              <button
+                key={`op1-${post}`}
+                onClick={() => togglePostSelection(post, 1)}
+                className={`p-4 border rounded-md font-bold transition-all ${
+                  selectedPostsOp1.includes(post)
+                    ? "bg-blue-500 text-white border-4 border-blue-800 scale-110"
+                    : "bg-gray-200 border border-gray-400 hover:bg-gray-300"
+                }`}
+              >
+                Post {post} {selectedPostsOp1.includes(post) ? "✔" : ""}
+              </button>
+            ))}
+          </div>
+          {operations === 2 && (
+            <>
+              <h3 className="font-bold mb-2">Operation {op2}</h3>
+              <div className="grid grid-cols-4 gap-4">
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((post) => (
+                  <button
+                    key={`op2-${post}`}
+                    onClick={() => togglePostSelection(post, 2)}
+                    className={`p-4 border rounded-md font-bold transition-all ${
+                      selectedPostsOp2.includes(post)
+                        ? "bg-green-500 text-white border-4 border-green-800 scale-110"
+                        : "bg-gray-200 border border-gray-400 hover:bg-gray-300"
+                    }`}
+                  >
+                    Post {post} {selectedPostsOp2.includes(post) ? "✔" : ""}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          <button
+            onClick={() => setStep(5)}
+            className="bg-blue-500 text-white px-4 py-2 rounded-md mt-4"
+          >
             Next
-            </button>
+          </button>
         </div>
-        )}
+      )}
 
-        {step === 4.2 && (
-        <div className="w-full max-w-md">
-            <label className="block text-lg mb-2">
-            How many tools are used for OP{op2}?
-            </label>
-            <input
-              type="number"
-              min="1"
-              value={toolCount[op2] || ""}
-              onChange={(e) => {
-                const count = Number(e.target.value) || 1;
-                setToolCount((prev) => ({
-                  ...prev,
-                  [op2]: count
-                }));
-              }}
-                        
-            
-            className="w-full p-2 border rounded-md mb-4"
-            />
-            <button
-              onClick={() => {
-                setCurrentToolIndex(0);
-                setStep(5.2); // ✅ Move to OP2 tool entry
-              }}
-              className="bg-blue-500 text-white px-4 py-2 rounded-md"
-            >
-              Next
-            </button>
-
-        </div>
-        )}
 
       {/* Step 5+5.2: Tool Details Input */}
-      {((step === 5 && currentToolIndex < (toolCount[op1] || 0)) || 
-        (step === 5.2 && currentToolIndex < (toolCount[op2] || 0))) && (
+      {((step === 5 && currentToolIndex < selectedPostsOp1.length) || 
+        (step === 5.2 && currentToolIndex < selectedPostsOp2.length)) && (
 
         <div className="w-full max-w-md">
 
             <h2 className="text-xl font-semibold mb-4">
-                Tool {currentToolIndex + 1} for OP{step === 5 ? op1 : op2}
+              Tool for Post {currentPost} (OP{step === 5 ? op1 : op2})
             </h2>
-            
 
-            {/* Tool Number Input */}
-              <div className="mb-4">
-                  <label className="block text-lg mb-2">Tool Number:</label>
-                  <input
-                      type="text"
-                      className="w-full p-2 border rounded-md"
-                      value={toolInput.toolNumber}
-                      onChange={(e) => setToolInput({ ...toolInput, toolNumber: e.target.value })}
-                  />
-              </div>
 
               {/* Display Text Input */}
               <div className="mb-4">
@@ -251,13 +250,18 @@ export default function MMKCreator() {
             {/* Next Tool Button */}
             <button
               onClick={() => {
-                  if (!toolInput.toolNumber) {
-                      alert("Please enter a tool number before proceeding.");
-                      return;
-                  }
 
                   setTools((prevTools) => {
-                    const newTool = { op: step === 5 ? Number(op1) : Number(op2), ...toolInput };
+                    const newTool = {
+                      toolNumber: currentPost, // Auto-assign tool number
+                      post: currentPost, // Auto-assign post number
+                      op: step === 5 ? Number(op1) : Number(op2),
+                      displayText: toolInput.displayText,
+                      cuttingEdge: toolInput.cuttingEdge,
+                      axis: toolInput.axis,
+                    };
+                    
+                    
                     const updatedTools = [...prevTools, newTool];
                 
                     console.log("📌 Saved Tool:", newTool);
@@ -306,7 +310,7 @@ export default function MMKCreator() {
                           updatedHeader = `[MM0]\nTEXT="${workpieceNumber}"\n;\n`;
                           updatedHeader += `[MM1]\nTEXT="OP${op2} ${workpieceNumber}"\n;\n`;
                           updatedHeader += formatTools(formattedOp1Tools);
-                          updatedHeader += `\n;\n[MM100]\nTEXT="OP${op2} ${workpieceNumber}"\n;\n`;
+                          updatedHeader += `\n;\n[MM100]\nTEXT="OP${op1} ${workpieceNumber}"\n;\n`;
                           updatedHeader += formatTools(formattedOp2Tools);
                       }
                       updatedHeader +=`\n;\n;\n
@@ -369,21 +373,21 @@ export default function MMKCreator() {
                 
                   // ✅ Move to the next tool input step
                 setTimeout(() => {
-                  if (step === 5 && currentToolIndex + 1 < toolCount[op1]) {
+                  if (step === 5 && currentToolIndex + 1 < selectedPostsOp1.length) {
                       setCurrentToolIndex((prevIndex) => prevIndex + 1);
-                  } else if (step === 5 && currentToolIndex + 1 >= toolCount[op1]) {
+                  } else if (step === 5 && currentToolIndex + 1 >= selectedPostsOp1.length) {
                       if (operations === 2) {
                           setCurrentToolIndex(0);
-                          setStep(4.2); // Move to OP2 tool count input
+                          setStep(5.2); // Move to OP2 tool count input
                       } else {
                           setStep(6); // No OP2, proceed to final output
                       }
                   } else if (step === 4.2) {
                       setCurrentToolIndex(0);
                       setStep(5.2); // Move to OP2 tool entry
-                  } else if (step === 5.2 && currentToolIndex + 1 < toolCount[op2]) {
+                  } else if (step === 5.2 && currentToolIndex + 1 < selectedPostsOp2.length) {
                       setCurrentToolIndex((prevIndex) => prevIndex + 1);
-                  } else if (step === 5.2 && currentToolIndex + 1 >= toolCount[op2]) {
+                  } else if (step === 5.2 && currentToolIndex + 1 >= selectedPostsOp2.length) {
                       setStep(6); // Proceed to MMK output
                   }
                 }, 100); // Small delay ensures state updates properly
