@@ -26,6 +26,7 @@ export default [
     ],
 
     rules: {
+      "react/prop-types": "off", // Disable prop-types as we use TypeScript
       "react/react-in-jsx-scope": "off", // Next.js handles React imports
       "no-unused-vars": ["warn", { varsIgnorePattern: "^_" }], // Warn only & ignore _unused vars
       "no-undef": "off", // Ignore undefined variables

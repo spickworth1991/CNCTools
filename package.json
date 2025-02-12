@@ -8,10 +8,17 @@
     "start": "next start"
   },
   "dependencies": {
+    "add": "^2.0.6",
     "autoprefixer": "^10.4.20",
+    "card": "^2.5.4",
+    "classnames": "^2.5.1",
+    "init": "^0.1.2",
+    "lucide-react": "^0.475.0",
     "next": "15.1.6",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "shadcn-ui": "^0.9.4",
+    "util": "^0.12.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

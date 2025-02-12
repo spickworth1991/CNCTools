@@ -1,30 +1,36 @@
-import { useRouter } from 'next/navigation';
+"use client";
 import React from "react";
+import { useRouter } from "next/navigation";
 
-const tools = [
-  { id: 'mmk-creator', name: 'MMK Creator', description: 'Generate MMK programs for tool correction' },
-  //{ id: 'l300-probe', name: 'L300 Probe Program', description: 'Generate L300 probe programs' },
-  { id: 't-list-creator', name: 'T_List Creator', description: 'Generate T_List programs' },
-];
 
-export default function Home() {
+export default function HomePage() {
   const router = useRouter();
 
   return (
-    <div className="flex flex-col items-center p-10">
-      <h1 className="text-4xl font-bold mb-8">CNC Tool Generator</h1>
-      <p className="mb-6 text-lg text-gray-700">Select a tool to generate a program:</p>
-      <div className="w-full max-w-lg space-y-4">
-        {tools.map((tool) => (
-          <button
-            key={tool.id}
-            onClick={() => router.push(`/tool/${tool.id}`)}
-            className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg text-lg hover:bg-blue-600 transition"
-          >
-            {tool.name}
-          </button>
-        ))}
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-6">
+      <h1 className="text-4xl font-bold text-gray-800 mb-6">CNC Tool Generator</h1>
+      <p className="text-lg text-gray-600 mb-8">Select a tool to begin creating your CNC programs.</p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl">
+        
+        <div className="card cursor-pointer" onClick={() => router.push("tool/mmk-creator")}>
+          <div className="p-6 flex flex-col items-center">
+            
+            <h3 className="text-lg font-semibold">MMK Creator</h3>
+            <p className="text-gray-500 text-sm text-center">Generate standard MMK programs for tool correction.</p>
+          </div>
+        </div>
+
+        <div className="card cursor-pointer" onClick={() => router.push("tool/t-list-creator")}>
+          <div className="p-6 flex flex-col items-center">
+            
+            <h3 className="text-lg font-semibold">T_List Creator</h3>
+            <p className="text-gray-500 text-sm text-center">Generate T-List programs for Siemens CNC.</p>
+          </div>
+        </div>
+
       </div>
     </div>
   );
 }
+

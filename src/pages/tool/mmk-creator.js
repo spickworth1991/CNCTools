@@ -79,15 +79,16 @@ export default function MMKCreator() {
 
       {/* Step 1: Ask for Workpiece Number */}
       {step === 1 && (
-        <div className="w-full max-w-md">
-          <label className="block text-lg mb-2">Enter Workpiece Number:</label>
+        <div className="flex flex-col items-center w-full max-w-md bg-white shadow-lg p-6 rounded-xl">
+          <h2 className="text-xl font-bold text-gray-800 mb-4">Enter Workpiece Number:</h2>
           <input
             type="text"
+            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+            placeholder="Enter workpiece number"
             value={workpieceNumber}
             onChange={(e) => setWorkpieceNumber(e.target.value)}
-            className="w-full p-2 border rounded-md mb-4"
           />
-          <button onClick={nextStep} className="bg-blue-500 text-white px-4 py-2 rounded-md">
+          <button onClick={nextStep} className="w-full bg-blue-500 text-white py-3 rounded-lg mt-4 hover:bg-blue-600 transition">
             Next
           </button>
         </div>
@@ -95,8 +96,8 @@ export default function MMKCreator() {
 
       {/* Step 2: Ask if 1 or 2 Operations */}
       {step === 2 && (
-        <div className="w-full max-w-md">
-          <label className="block text-lg mb-2">How many operations?</label>
+        <div className="flex flex-col items-center w-full max-w-md bg-white shadow-lg p-6 rounded-xl">
+          <h2 className="text-xl font-bold text-gray-800 mb-4">How many operations?</h2>
           <select
             value={operations}
             onChange={(e) => setOperations(Number(e.target.value))}
@@ -118,7 +119,7 @@ export default function MMKCreator() {
               </select>
             </>
           )}
-          <button onClick={nextStep} className="bg-blue-500 text-white px-4 py-2 rounded-md">
+          <button onClick={nextStep} className="w-full bg-blue-500 text-white py-3 rounded-lg mt-4 hover:bg-blue-600 transition">
             Next
           </button>
         </div>
@@ -126,13 +127,13 @@ export default function MMKCreator() {
 
       {/* Step 3: Ask for Operation Numbers */}
       {step === 3 && (
-        <div className="w-full max-w-md">
-        <label className="block text-lg mb-2">Enter Operation Number(s):</label>
+        <div className="flex flex-col items-center w-full max-w-md bg-white shadow-lg p-6 rounded-xl">
+          <h2 className="text-xl font-bold text-gray-800 mb-4">Enter Operation Number(s):</h2>
         <input
           type="text"
           value={op1}
           onChange={(e) => setOp1(e.target.value)}
-          className="w-full p-2 border rounded-md mb-4"
+          className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
           placeholder="Operation 1"
         />
         {operations === 2 && (
@@ -140,19 +141,19 @@ export default function MMKCreator() {
             type="text"
             value={op2}
             onChange={(e) => setOp2(e.target.value)}
-            className="w-full p-2 border rounded-md mb-4"
+            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
             placeholder="Operation 2"
           />
         )}
-        <button onClick={storeHeaderAndContinue} className="bg-blue-500 text-white px-4 py-2 rounded-md">
+        <button onClick={storeHeaderAndContinue} className="w-full bg-blue-500 text-white py-3 rounded-lg mt-4 hover:bg-blue-600 transition">
           Next
         </button>
       </div>
       )}
 
       {step === 4 && (
-        <div className="w-full max-w-md">
-          <h2 className="text-xl font-semibold mb-4">Select Tool Posts</h2>
+        <div className="flex flex-col items-center w-full max-w-md bg-white shadow-lg p-6 rounded-xl">
+          <h2 className="text-xl font-bold text-gray-800 mb-4">Select Tool Posts</h2>
           <h3 className="font-bold mb-2">Operation {op1}</h3>
           <div className="grid grid-cols-4 gap-4 mb-4">
             {Array.from({ length: 12 }, (_, i) => i + 1).map((post) => (
@@ -161,7 +162,7 @@ export default function MMKCreator() {
                 onClick={() => togglePostSelection(post, 1)}
                 className={`p-4 border rounded-md font-bold transition-all ${
                   selectedPostsOp1.includes(post)
-                    ? "bg-blue-500 text-white border-4 border-blue-800 scale-110"
+                    ? "bg-blue-500 text-white border-blue-700 scale-105"
                     : "bg-gray-200 border border-gray-400 hover:bg-gray-300"
                 }`}
               >
@@ -179,7 +180,7 @@ export default function MMKCreator() {
                     onClick={() => togglePostSelection(post, 2)}
                     className={`p-4 border rounded-md font-bold transition-all ${
                       selectedPostsOp2.includes(post)
-                        ? "bg-green-500 text-white border-4 border-green-800 scale-110"
+                        ? "bg-blue-500 text-white border-blue-700 scale-105"
                         : "bg-gray-200 border border-gray-400 hover:bg-gray-300"
                     }`}
                   >
@@ -191,7 +192,7 @@ export default function MMKCreator() {
           )}
           <button
             onClick={() => setStep(5)}
-            className="bg-blue-500 text-white px-4 py-2 rounded-md mt-4"
+            className="w-full bg-blue-500 text-white py-3 rounded-lg mt-4 hover:bg-blue-600 transition"
           >
             Next
           </button>
@@ -203,9 +204,8 @@ export default function MMKCreator() {
       {((step === 5 && currentToolIndex < selectedPostsOp1.length) || 
         (step === 5.2 && currentToolIndex < selectedPostsOp2.length)) && (
 
-        <div className="w-full max-w-md">
-
-            <h2 className="text-xl font-semibold mb-4">
+          <div className="flex flex-col items-center w-full max-w-md bg-white shadow-lg p-6 rounded-xl">
+          <h2 className="text-xl font-bold text-gray-800 mb-4">
               Tool for Post {currentPost} (OP{step === 5 ? op1 : op2})
             </h2>
 
@@ -215,7 +215,7 @@ export default function MMKCreator() {
                   <label className="block text-lg mb-2">Display Text (Cut Type & Nominal):</label>
                   <input
                       type="text"
-                      className="w-full p-2 border rounded-md"
+                      className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
                       value={toolInput.displayText}
                       onChange={(e) => setToolInput({ ...toolInput, displayText: e.target.value })}
                   />
@@ -227,7 +227,7 @@ export default function MMKCreator() {
                   <input
                       type="number"
                       min="1"
-                      className="w-full p-2 border rounded-md"
+                      className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
                       value={toolInput.cuttingEdge}
                       onChange={(e) => setToolInput({ ...toolInput, cuttingEdge: e.target.value })}
                   />
@@ -237,7 +237,7 @@ export default function MMKCreator() {
               <div className="mb-4">
                   <label className="block text-lg mb-2">Select Axis (V Number):</label>
                   <select
-                      className="w-full p-2 border rounded-md"
+                      className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
                       value={toolInput.axis}
                       onChange={(e) => setToolInput({ ...toolInput, axis: e.target.value })}
                   >
@@ -250,6 +250,7 @@ export default function MMKCreator() {
             {/* Next Tool Button */}
             <button
               onClick={() => {
+                
 
                   setTools((prevTools) => {
                     const newTool = {
@@ -402,8 +403,8 @@ export default function MMKCreator() {
 
     {/* Step 6: Show MMK with Proper Notepad++ Formatting */}
     {step === 6 && (
-        <div className="w-full max-w-md">
-            <h2 className="text-xl font-semibold mb-4">MMK Program ✅</h2>
+        <div className="flex flex-col items-center w-full max-w-md bg-white shadow-lg p-6 rounded-xl">
+          <h2 className="text-xl font-bold text-gray-800 mb-4">MMK Program ✅</h2>
             <textarea
             className="w-full p-4 border rounded-md font-mono text-sm"
             rows="15"
@@ -412,13 +413,13 @@ export default function MMKCreator() {
             ></textarea>
             <button
             onClick={() => navigator.clipboard.writeText(mmkHeader)}
-            className="bg-green-500 text-white px-4 py-2 mt-4 rounded-md"
+            className="w-full bg-blue-500 text-white py-3 rounded-lg mt-4 hover:bg-blue-600 transition"
             >
             Copy MMK Program
             </button>
             <button
             onClick={() => router.push(`/`)}
-            className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg text-lg hover:bg-blue-600 transition"
+            className="w-full bg-blue-500 text-white py-3 rounded-lg mt-4 hover:bg-blue-600 transition"
           >
             Home
           </button>
