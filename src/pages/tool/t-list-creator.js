@@ -264,78 +264,82 @@ T_LOAD              ; Cycle load Tool data ;*RO*
   };
 
   return (
-    <div className="flex flex-col items-center p-6">
-      <h1 className="text-3xl font-bold mb-6">T_LIST Creator</h1>
+    <div>
+      <h1 className="h1">T_LIST Creator</h1>
 
       {step === 1 && (
-        <div className="w-full max-w-md">
-          <label className="block text-lg mb-2">How many operations?</label>
+        <div>
+          <label className="question">How many operations?</label>
           <select
+            className= "dropdown"
             value={operations}
             onChange={(e) => setOperations(Number(e.target.value))}
-            className="w-full p-2 border rounded-md mb-4"
           >
             <option value={1}>1 Operation</option>
             <option value={2}>2 Operations</option>
           </select>
           {operations === 2 && (
             <>
-              <label className="block text-lg mb-2">Machining Flow:</label>
+              <label className="question">Machining Flow:</label>
               <select
+                className= "dropdown"
                 value={flowDirection}
                 onChange={(e) => setFlowDirection(e.target.value)}
-                className="w-full p-2 border rounded-md mb-4"
               >
                 <option value="left-to-right">Left to Right</option>
                 <option value="right-to-left">Right to Left</option>
               </select>
             </>
           )}
-          <button onClick={nextStep} className="bg-blue-500 text-white px-4 py-2 rounded-md">
+          <button onClick={nextStep} className= "button">
             Next
           </button>
         </div>
       )}
 
       {step === 2 && (
-        <div className="w-full max-w-md">
-          <label className="block text-lg mb-2">Enter Operation Number(s):</label>
+        <div>
+          <div>
+          <label className="question">Enter Operation Number(s):</label>
+          </div>
+          <div>
           <input
+            className="input"
             type="text"
             value={op1}
             onChange={(e) => setOp1(e.target.value)}
-            className="w-full p-2 border rounded-md mb-4"
             placeholder="Operation 1"
           />
+          </div>
+          <div>
           {operations === 2 && (
             <input
+              className="input"
               type="text"
               value={op2}
               onChange={(e) => setOp2(e.target.value)}
-              className="w-full p-2 border rounded-md mb-4"
               placeholder="Operation 2"
             />
           )}
-          <button onClick={nextStep} className="bg-blue-500 text-white px-4 py-2 rounded-md">
+          </div>
+          <div>
+          <button onClick={nextStep} className= "button">
             Next
           </button>
+          </div>
         </div>
       )}
 
       {step === 3 && (
         <div>
-          <h2 className="text-xl font-semibold mb-4">Select Tool Posts</h2>
-          <h3 className="font-bold mb-2">Operation 1</h3>
-          <div className="grid grid-cols-4 gap-4 mb-4">
+          <h2>Select Tool Posts</h2>
+          <h3>Operation 1</h3>
+          <div>
             {Array.from({ length: 12 }, (_, i) => i + 1).map((post) => (
               <button
               key={`op1-${post}`}
               onClick={() => togglePostSelection(post, 1)}
-              className={`p-4 border rounded-md font-bold transition-all ${
-                selectedPostsOp1.includes(post)
-                  ? "bg-blue-500 text-white border-4 border-blue-800 scale-110"
-                  : "bg-gray-200 border border-gray-400 hover:bg-gray-300"
-              }`}
+              className={`button ${selectedPostsOp1.includes(post) ? "selected" : ""}`}
             >
               Post {post} {selectedPostsOp1.includes(post) ? "✔" : ""}
             </button>
@@ -345,28 +349,20 @@ T_LOAD              ; Cycle load Tool data ;*RO*
           <button
             key="probe"
             onClick={() => setIsProbeSelected1(!isProbeSelected1)}
-            className={`p-4 border rounded-md font-bold transition-all ${
-              isProbeSelected1
-                ? "bg-purple-500 text-white border-4 border-purple-800 scale-110"
-                : "bg-gray-200 border border-gray-400 hover:bg-gray-300"
-            }`}
+            className= {`button ${isProbeSelected1 ? "selected" : ""}`}
           >
             Probe {isProbeSelected1 ? "✔" : ""}
           </button>
         </div>
           {operations === 2 && (
             <>
-              <h3 className="font-bold mb-2">Operation 2</h3>
-              <div className="grid grid-cols-4 gap-4">
+              <h3>Operation 2</h3>
+              <div >
                 {Array.from({ length: 12 }, (_, i) => i + 1).map((post) => (
                   <button
                   key={`op2-${post}`}
                   onClick={() => togglePostSelection(post, 2)}
-                  className={`p-4 border rounded-md font-bold transition-all ${
-                    selectedPostsOp2.includes(post)
-                      ? "bg-green-500 text-white border-4 border-green-800 scale-110"
-                      : "bg-gray-200 border border-gray-400 hover:bg-gray-300"
-                  }`}
+                  className={`button ${selectedPostsOp2.includes(post) ? "selected" : ""}`}
                 >
                   Post {post} {selectedPostsOp2.includes(post) ? "✔" : ""}
                 </button>
@@ -376,11 +372,7 @@ T_LOAD              ; Cycle load Tool data ;*RO*
                 <button
                   key="probe"
                   onClick={() => setIsProbeSelected2(!isProbeSelected2)}
-                  className={`p-4 border rounded-md font-bold transition-all ${
-                    isProbeSelected2
-                      ? "bg-purple-500 text-white border-4 border-purple-800 scale-110"
-                      : "bg-gray-200 border border-gray-400 hover:bg-gray-300"
-                  }`}
+                  className= {`button ${isProbeSelected2 ? "selected" : ""}`}
                 >
                   Probe {isProbeSelected2 ? "✔" : ""}
                 </button>
@@ -389,7 +381,7 @@ T_LOAD              ; Cycle load Tool data ;*RO*
           )}
           <button
             onClick={nextStep}
-            className="bg-blue-500 text-white px-4 py-2 rounded-md mt-4"
+            className= "button"
           >
             Next
           </button>
@@ -397,64 +389,64 @@ T_LOAD              ; Cycle load Tool data ;*RO*
       )}
 
       {step === 4 && currentToolIndex <  selectedPostsOp1.length &&  (
-        <div className="w-full max-w-md">
-          <h2 className="text-xl font-semibold mb-4">
+        <div>
+          <h2 className="h2"> 
             Tool for Post { selectedPostsOp1[currentToolIndex]
                 }{" "}
             (OP{op1})
           </h2>
 
-          <label className="block text-lg mb-2">Duplo Number:</label>
+          <label className="question">Duplo Number:</label>
           <select
+            className="dropdown"
             value={toolInput.duploNumber}
             onChange={(e) => setToolInput({ ...toolInput, duploNumber: e.target.value })}
-            className="w-full p-2 border rounded-md mb-4"
           >
             <option value="1">Main Tool</option>
             <option value="2">Spare Tool</option>
           </select>
-          <label className="block text-lg mb-2">Cutting Edge Nominal Value:</label>
+          <label className="question">Cutting Edge Nominal Value:</label>
           <input
+            className="input"
             type="number"
             value={toolInput.cuttingEdge}
             onChange={(e) => setToolInput({ ...toolInput, cuttingEdge: e.target.value })}
-            className="w-full p-2 border rounded-md mb-4"
           />
           <button
+            className="button"
             onClick={handleSaveTool}
-            className="bg-blue-500 text-white px-4 py-2 rounded-md"
           >
             Save Tool
           </button>
         </div>
         )}
         {step === 4.2 && currentToolIndex  < selectedPostsOp1.length + selectedPostsOp2.length  &&  (
-          <div className="w-full max-w-md">
-            <h2 className="text-xl font-semibold mb-4">
+          <div>
+            <h2 className="h2">
               Tool for Post {selectedPostsOp2[currentToolIndex]
                   }{" "}
               (OP{op2})
             </h2>
 
-            <label className="block text-lg mb-2">Duplo Number:</label>
+            <label className="question">Duplo Number:</label>
             <select
+              className="dropdown"
               value={toolInput.duploNumber}
               onChange={(e) => setToolInput({ ...toolInput, duploNumber: e.target.value })}
-              className="w-full p-2 border rounded-md mb-4"
             >
               <option value="1">Main Tool</option>
               <option value="2">Spare Tool</option>
             </select>
-            <label className="block text-lg mb-2">Cutting Edge Nominal Value:</label>
+            <label className="question">Cutting Edge Nominal Value:</label>
             <input
+              className="input"
               type="number"
               value={toolInput.cuttingEdge}
               onChange={(e) => setToolInput({ ...toolInput, cuttingEdge: e.target.value })}
-              className="w-full p-2 border rounded-md mb-4"
             />
             <button
+              className="button"
               onClick={handleSaveTool2}
-              className="bg-blue-500 text-white px-4 py-2 rounded-md"
             >
               Save Tool
             </button>
@@ -462,12 +454,12 @@ T_LOAD              ; Cycle load Tool data ;*RO*
 
       )}
       {step === 5 && (
-        <div className="w-full max-w-md">
-          <h2 className="text-xl font-semibold mb-4">Select Probe Post for Operation 1</h2>
+        <div>
+          <h2 className="h2">Select Probe Post for Operation 1</h2>
           <select
+            className="dropdown"
             value={selectedProbePostOp1}
             onChange={(e) => setSelectedProbePostOp1(e.target.value)}
-            className="w-full p-2 border rounded-md mb-4"
           >
             <option value="">Select Probe Post</option>
             {Array.from({ length: 16 }, (_, i) => i + 1).map((post) => (
@@ -477,8 +469,8 @@ T_LOAD              ; Cycle load Tool data ;*RO*
             ))}
           </select>
           <button
+          className="button"
             onClick={handleToolSave} // Move to operation 2 tool questions or final step
-            className="bg-blue-500 text-white px-4 py-2 rounded-md"
           >
             Next
           </button>
@@ -486,12 +478,12 @@ T_LOAD              ; Cycle load Tool data ;*RO*
       )}
 
       {step === 5.2 && (
-        <div className="w-full max-w-md">
-          <h2 className="text-xl font-semibold mb-4">Select Probe Post for Operation 2</h2>
+        <div>
+          <h2 className="h2">Select Probe Post for Operation 2</h2>
           <select
+            className="dropdown"
             value={selectedProbePostOp2}
             onChange={(e) => setSelectedProbePostOp2(e.target.value)}
-            className="w-full p-2 border rounded-md mb-4"
           >
             <option value="">Select Probe Post</option>
             {Array.from({ length: 16 }, (_, i) => i + 1).map((post) => (
@@ -501,83 +493,95 @@ T_LOAD              ; Cycle load Tool data ;*RO*
             ))}
           </select>
           <button
+            className="button"
             onClick={handleToolSave} // Move to the final step
-            className="bg-blue-500 text-white px-4 py-2 rounded-md"
           >
             Next
           </button>
         </div>
       )}
 
-      {step === 6 && (
-        <div className="w-full max-w-lg flex flex-col items-center">
-          <h2 className="text-xl font-semibold mb-4">Generated T_LIST Code</h2>
-          {operations === 1 ? (
-            <div className="flex flex-wrap gap-4 justify-center">
-              <div className="w-full md:w-1/2">
-                <h3 className="text-lg font-semibold mb-2">T_LIST1</h3>
-                <textarea
-                  readOnly
-                  className="w-full p-4 border rounded-md font-mono text-sm"
-                  rows="15"
-                  value={generatedCode.tlist1}
-                ></textarea>
-                <button
-                  onClick={() => navigator.clipboard.writeText(generatedCode.tlist1)}
-                  className="bg-green-500 text-white px-4 py-2 mt-2 rounded-md"
-                >
-                  Copy T_LIST1
-                </button>
-                <button
-                  onClick={() => window.location.href = "/"}
-                  className="bg-blue-600 text-white px-6 py-3 rounded-md mt-6 hover:bg-blue-700"
-                >
-                  Home
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-4 justify-center">
-              <div className="w-full md:w-1/2">
-                <h3 className="text-lg font-semibold mb-2">T_LIST1</h3>
-                <textarea
-                  readOnly
-                  className="w-full p-4 border rounded-md font-mono text-sm"
-                  rows="15"
-                  value={generatedCode.tlist1}
-                ></textarea>
-                <button
-                  onClick={() => navigator.clipboard.writeText(generatedCode.tlist1)}
-                  className="bg-green-500 text-white px-4 py-2 mt-2 rounded-md"
-                >
-                  Copy T_LIST1
-                </button>
-              </div>
-              <div className="w-full md:w-1/2">
-                <h3 className="text-lg font-semibold mb-2">T_LIST2</h3>
-                <textarea
-                  readOnly
-                  className="w-full p-4 border rounded-md font-mono text-sm"
-                  rows="15"
-                  value={generatedCode.tlist2}
-                ></textarea>
-                <button
-                  onClick={() => navigator.clipboard.writeText(generatedCode.tlist2)}
-                  className="bg-green-500 text-white px-4 py-2 mt-2 rounded-md"
-                >
-                  Copy T_LIST2
-                </button>
-                <button
-                  onClick={() => window.location.href = "/"}
-                  className="bg-blue-600 text-white px-6 py-3 rounded-md mt-6 hover:bg-blue-700"
-                >
-                  Home
-                </button>
-              </div>
-            </div>
-          )}
+{step === 6 && (
+  <div>
+    <h2 className="h2">T_LIST Program ✅</h2>
+    {operations === 1 ? (
+      <div>
+        <div>
+          <h3 className="h3">T_LIST1</h3>
+          <div>
+            <textarea
+              className="textarea"
+              readOnly
+              rows="15"
+              value={generatedCode.tlist1}
+            ></textarea>
+          </div>
+          <div>
+            <button
+              className="button"
+              onClick={() => navigator.clipboard.writeText(generatedCode.tlist1)}
+            >
+              Copy T_LIST1
+            </button>
+            <button
+              className="button"
+              onClick={() => window.location.href = "/"}
+            >
+              Home
+            </button>
+          </div>
         </div>
-      )}
+      </div>
+    ) : (
+      <div>
+        <div>
+          <h3 className="h3">T_LIST1</h3>
+          <div>
+            <textarea
+              className="textarea"
+              readOnly
+              rows="15"
+              value={generatedCode.tlist1}
+            ></textarea>
+          </div>
+          <div>
+            <button
+              className="button"
+              onClick={() => navigator.clipboard.writeText(generatedCode.tlist1)}
+            >
+              Copy T_LIST1
+            </button>
+          </div>
+        </div>
+        <div>
+          <h3 className="h3">T_LIST2</h3>
+          <div>
+            <textarea
+              className="textarea"
+              readOnly
+              rows="15"
+              value={generatedCode.tlist2}
+            ></textarea>
+          </div>
+          <div>
+            <button
+              className="button"
+              onClick={() => navigator.clipboard.writeText(generatedCode.tlist2)}
+            >
+              Copy T_LIST2
+            </button>
+            <button
+              className="button"
+              onClick={() => window.location.href = "/"}
+            >
+              Home
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+)}
     </div>
   );
-  }
+} 

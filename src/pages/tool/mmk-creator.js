@@ -41,12 +41,13 @@ export default function MMKCreator() {
   const formatTools = (tools) => {
       return tools.map((tool, index) => 
           `[MM${tool.mmNumber || index + 2}]
-  TEXT="${tool.displayText}"
-  Chan=${flowDirection === "left-to-right" ? 
-      (tool.op === Number(op1) ? 1 : 2) : (tool.op === Number(op1) ? 2 : 1)}
-  T=T${tool.post || tool.toolNumber}_OP${tool.op} D${tool.cuttingEdge || 1} V${tool.axis || 1}
-  FAKTOR=100
-  ;`
+TEXT="${tool.displayText}"
+Chan=${flowDirection === "left-to-right" ? 
+    (tool.op === Number(op1) ? 1 : 2) : (tool.op === Number(op1) ? 2 : 1)}
+T=T${tool.post || tool.toolNumber}_OP${tool.op} D${tool.cuttingEdge || 1} V${tool.axis || 1}
+FAKTOR=100
+;
+`
       ).join("\n");
   };
 
@@ -74,21 +75,21 @@ export default function MMKCreator() {
 
 
   return (
-    <div className="flex flex-col items-center p-6">
-      <h1 className="text-3xl font-bold mb-6">MMK Creator</h1>
+    <div>
+      <h1 className="h1">MMK Creator</h1>
 
       {/* Step 1: Ask for Workpiece Number */}
       {step === 1 && (
-        <div className="flex flex-col items-center w-full max-w-md bg-white shadow-lg p-6 rounded-xl">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">Enter Workpiece Number:</h2>
+        <div>
+          <h2 className="h2">Enter Workpiece Number:</h2>
           <input
             type="text"
-            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className="input"
             placeholder="Enter workpiece number"
             value={workpieceNumber}
             onChange={(e) => setWorkpieceNumber(e.target.value)}
           />
-          <button onClick={nextStep} className="w-full bg-blue-500 text-white py-3 rounded-lg mt-4 hover:bg-blue-600 transition">
+          <button onClick={nextStep} className="button">
             Next
           </button>
         </div>
@@ -96,30 +97,30 @@ export default function MMKCreator() {
 
       {/* Step 2: Ask if 1 or 2 Operations */}
       {step === 2 && (
-        <div className="flex flex-col items-center w-full max-w-md bg-white shadow-lg p-6 rounded-xl">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">How many operations?</h2>
+        <div>
+          <h2 className="h2">How many operations?</h2>
           <select
             value={operations}
             onChange={(e) => setOperations(Number(e.target.value))}
-            className="w-full p-2 border rounded-md mb-4"
+            className="dropdown"
           >
             <option value={1}>1 Operation</option>
             <option value={2}>2 Operations</option>
           </select>
           {operations === 2 && (
             <>
-              <label className="block text-lg mb-2">Machining Flow:</label>
+              <label className="question">Machining Flow:</label>
               <select
                 value={flowDirection}
                 onChange={(e) => setFlowDirection(e.target.value)}
-                className="w-full p-2 border rounded-md mb-4"
+                className="dropdown"
               >
                 <option value="left-to-right">Left to Right</option>
                 <option value="right-to-left">Right to Left</option>
               </select>
             </>
           )}
-          <button onClick={nextStep} className="w-full bg-blue-500 text-white py-3 rounded-lg mt-4 hover:bg-blue-600 transition">
+          <button onClick={nextStep} className="button">
             Next
           </button>
         </div>
@@ -127,44 +128,47 @@ export default function MMKCreator() {
 
       {/* Step 3: Ask for Operation Numbers */}
       {step === 3 && (
-        <div className="flex flex-col items-center w-full max-w-md bg-white shadow-lg p-6 rounded-xl">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">Enter Operation Number(s):</h2>
+        <div>
+          <div>
+          <h2 className="h2">Enter Operation Number(s):</h2>
+          </div>
+          <div>
         <input
           type="text"
           value={op1}
           onChange={(e) => setOp1(e.target.value)}
-          className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="input"
           placeholder="Operation 1"
-        />
+        /></div>
+        <div>
         {operations === 2 && (
           <input
             type="text"
             value={op2}
             onChange={(e) => setOp2(e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className="input"
             placeholder="Operation 2"
           />
         )}
-        <button onClick={storeHeaderAndContinue} className="w-full bg-blue-500 text-white py-3 rounded-lg mt-4 hover:bg-blue-600 transition">
+        </div>
+        <div>
+        <button onClick={storeHeaderAndContinue} className="button">
           Next
         </button>
+        </div>
       </div>
       )}
 
       {step === 4 && (
-        <div className="flex flex-col items-center w-full max-w-md bg-white shadow-lg p-6 rounded-xl">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">Select Tool Posts</h2>
-          <h3 className="font-bold mb-2">Operation {op1}</h3>
-          <div className="grid grid-cols-4 gap-4 mb-4">
+        <div>
+          <h2 className="h2">Select Tool Posts</h2>
+          <h3 className="h3">Operation {op1}</h3>
+          <div>
             {Array.from({ length: 12 }, (_, i) => i + 1).map((post) => (
               <button
                 key={`op1-${post}`}
                 onClick={() => togglePostSelection(post, 1)}
-                className={`p-4 border rounded-md font-bold transition-all ${
-                  selectedPostsOp1.includes(post)
-                    ? "bg-blue-500 text-white border-blue-700 scale-105"
-                    : "bg-gray-200 border border-gray-400 hover:bg-gray-300"
-                }`}
+                className={`button ${selectedPostsOp1.includes(post) ? "selected" : ""}`}
               >
                 Post {post} {selectedPostsOp1.includes(post) ? "✔" : ""}
               </button>
@@ -172,17 +176,13 @@ export default function MMKCreator() {
           </div>
           {operations === 2 && (
             <>
-              <h3 className="font-bold mb-2">Operation {op2}</h3>
-              <div className="grid grid-cols-4 gap-4">
+              <h3 className="h3">Operation {op2}</h3>
+              <div>
                 {Array.from({ length: 12 }, (_, i) => i + 1).map((post) => (
                   <button
                     key={`op2-${post}`}
                     onClick={() => togglePostSelection(post, 2)}
-                    className={`p-4 border rounded-md font-bold transition-all ${
-                      selectedPostsOp2.includes(post)
-                        ? "bg-blue-500 text-white border-blue-700 scale-105"
-                        : "bg-gray-200 border border-gray-400 hover:bg-gray-300"
-                    }`}
+                    className={`button ${selectedPostsOp2.includes(post) ? "selected" : ""}`}
                   >
                     Post {post} {selectedPostsOp2.includes(post) ? "✔" : ""}
                   </button>
@@ -192,7 +192,7 @@ export default function MMKCreator() {
           )}
           <button
             onClick={() => setStep(5)}
-            className="w-full bg-blue-500 text-white py-3 rounded-lg mt-4 hover:bg-blue-600 transition"
+            className="button"
           >
             Next
           </button>
@@ -204,40 +204,40 @@ export default function MMKCreator() {
       {((step === 5 && currentToolIndex < selectedPostsOp1.length) || 
         (step === 5.2 && currentToolIndex < selectedPostsOp2.length)) && (
 
-          <div className="flex flex-col items-center w-full max-w-md bg-white shadow-lg p-6 rounded-xl">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">
+          <div>
+          <h2 className="h2">
               Tool for Post {currentPost} (OP{step === 5 ? op1 : op2})
             </h2>
 
 
               {/* Display Text Input */}
-              <div className="mb-4">
-                  <label className="block text-lg mb-2">Display Text (Cut Type & Nominal):</label>
+              <div>
+                  <label className="question">Display Text (Cut Type & Nominal):</label>
                   <input
                       type="text"
-                      className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      className="input"
                       value={toolInput.displayText}
                       onChange={(e) => setToolInput({ ...toolInput, displayText: e.target.value })}
                   />
               </div>
 
               {/* Cutting Edge (D Number) */}
-              <div className="mb-4">
-                  <label className="block text-lg mb-2">Cutting Edge (D Number, Default: 1):</label>
+              <div>
+                  <label className="question">Cutting Edge (D Number, Default: 1):</label>
                   <input
                       type="number"
                       min="1"
-                      className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      className="input"
                       value={toolInput.cuttingEdge}
                       onChange={(e) => setToolInput({ ...toolInput, cuttingEdge: e.target.value })}
                   />
               </div>
 
               {/* Axis (V Number) Selection */}
-              <div className="mb-4">
-                  <label className="block text-lg mb-2">Select Axis (V Number):</label>
+              <div>
+                  <label className="question">Select Axis (V Number):</label>
                   <select
-                      className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      className="dropdown"
                       value={toolInput.axis}
                       onChange={(e) => setToolInput({ ...toolInput, axis: e.target.value })}
                   >
@@ -249,9 +249,8 @@ export default function MMKCreator() {
 
             {/* Next Tool Button */}
             <button
+              className="button"
               onClick={() => {
-                
-
                   setTools((prevTools) => {
                     const newTool = {
                       toolNumber: currentPost, // Auto-assign tool number
@@ -299,22 +298,28 @@ export default function MMKCreator() {
                   
                       if (flowDirection === "left-to-right") {
 
-                          updatedHeader = `[MM0]\nTEXT="${workpieceNumber}"\n;\n`;
-                          updatedHeader += `[MM1]\nTEXT="OP${op1} ${workpieceNumber}"\n;\n`;
+                          updatedHeader = `[MM0]\nTEXT="${workpieceNumber}"\n;
+\n`;
+                          updatedHeader += `[MM1]\nTEXT="OP${op1} ${workpieceNumber}"\n;
+\n`;
                           updatedHeader += formatTools(formattedOp1Tools);
                           if (operations === 2) {
-                              updatedHeader += `\n;\n[MM100]\nTEXT="OP${op2} ${workpieceNumber}"\n;\n`;
+                              updatedHeader += `\n;\n[MM100]\nTEXT="OP${op2} ${workpieceNumber}"\n;
+\n`;
                               updatedHeader += formatTools(formattedOp2Tools);
                           }
                       } else {
 
-                          updatedHeader = `[MM0]\nTEXT="${workpieceNumber}"\n;\n`;
-                          updatedHeader += `[MM1]\nTEXT="OP${op2} ${workpieceNumber}"\n;\n`;
+                          updatedHeader = `[MM0]\nTEXT="${workpieceNumber}"\n;
+\n`;
+                          updatedHeader += `[MM1]\nTEXT="OP${op2} ${workpieceNumber}"\n;
+\n`;
                           updatedHeader += formatTools(formattedOp1Tools);
-                          updatedHeader += `\n;\n[MM100]\nTEXT="OP${op1} ${workpieceNumber}"\n;\n`;
+                          updatedHeader += `\n;\n[MM100]\nTEXT="OP${op1} ${workpieceNumber}"\n;
+\n`;
                           updatedHeader += formatTools(formattedOp2Tools);
                       }
-                      updatedHeader +=`\n;\n;\n
+                      updatedHeader +=`\n;\n;
 ;<-----------------LEGEND----------------->\n
 ;[MMx]             ;//Header of the feature x
 ;Text              ;//Feature name, displayed text
@@ -393,7 +398,7 @@ export default function MMKCreator() {
                   }
                 }, 100); // Small delay ensures state updates properly
               }}
-              className="bg-blue-500 text-white px-4 py-2 rounded-md"
+              
           >
               Save & Next Tool
           </button>
@@ -403,32 +408,33 @@ export default function MMKCreator() {
 
     {/* Step 6: Show MMK with Proper Notepad++ Formatting */}
     {step === 6 && (
-        <div className="flex flex-col items-center w-full max-w-md bg-white shadow-lg p-6 rounded-xl">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">MMK Program ✅</h2>
+        <div>
+          <h2 className="h2">MMK Program ✅</h2>
+          <div>
             <textarea
-            className="w-full p-4 border rounded-md font-mono text-sm"
-            rows="15"
-            readOnly
-            value={`${mmkHeader.trim()}`}
-            ></textarea>
-            <button
-            onClick={() => navigator.clipboard.writeText(mmkHeader)}
-            className="w-full bg-blue-500 text-white py-3 rounded-lg mt-4 hover:bg-blue-600 transition"
-            >
-            Copy MMK Program
-            </button>
-            <button
-            onClick={() => router.push(`/`)}
-            className="w-full bg-blue-500 text-white py-3 rounded-lg mt-4 hover:bg-blue-600 transition"
-          >
-            Home
-          </button>
-            
-
+              className="textarea"
+              rows="15"
+              readOnly
+              value={`${mmkHeader.trim()}`}
+            />
+            <div />
+            <div>
+              <button
+                onClick={() => navigator.clipboard.writeText(mmkHeader)}
+                className="button"
+              >
+                Copy MMK Program
+              </button>
+              <button
+                onClick={() => router.push(`/`)}
+                className="button"
+              >
+                Home
+              </button>
+            </div>
+          </div>
         </div>
-        )}
-
+      )}
     </div>
   );
 }
-
