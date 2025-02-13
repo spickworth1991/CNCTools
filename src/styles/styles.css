@@ -135,3 +135,33 @@ textarea::-webkit-scrollbar-thumb:hover {
   box-shadow: 0 0 5px rgba(0, 86, 179, 0.5);
   outline: none; /* Remove default outline */
 }
+
+/* Media query for mobile devices */
+@media (max-width: 600px) {
+  .container {
+    padding: 10px;
+  }
+
+  .input, .textarea {
+    width: 90%;
+    max-width: none; /* Remove maximum width */
+  }
+
+  .button {
+    width: 100%;
+    padding: 10px;
+    font-size: 1.2em;
+  }
+
+  .h1 {
+    font-size: 1.8em;
+  }
+
+  .h2 {
+    font-size: 1.4em;
+  }
+
+  .h3 {
+    font-size: 1em;
+  }
+}

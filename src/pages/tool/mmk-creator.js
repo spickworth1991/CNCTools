@@ -82,6 +82,7 @@ FAKTOR=100
       {step === 1 && (
         <div>
           <h2 className="h2">Enter Workpiece Number:</h2>
+          <div>
           <input
             type="text"
             className="input"
@@ -89,6 +90,7 @@ FAKTOR=100
             value={workpieceNumber}
             onChange={(e) => setWorkpieceNumber(e.target.value)}
           />
+          </div>
           <button onClick={nextStep} className="button">
             Next
           </button>
