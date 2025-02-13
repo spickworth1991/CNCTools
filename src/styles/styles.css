@@ -145,6 +145,7 @@ textarea::-webkit-scrollbar-thumb:hover {
   .input, .textarea {
     width: 90%;
     max-width: none; /* Remove maximum width */
+    font-size: 16px; /* Prevent zoom on mobile */
   }
 
   .button {

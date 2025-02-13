@@ -37,6 +37,15 @@ export default function MMKCreator() {
     }
   };
   
+    const handleOpChange = (e, setOp) => {
+      const value = e.target.value;
+      if (!isNaN(value)) {
+        setOp(value);
+      } else {
+        alert("Please enter a numerical value.");
+      }
+    };
+  
 
   const formatTools = (tools) => {
       return tools.map((tool, index) => 
@@ -55,22 +64,29 @@ FAKTOR=100
   const nextStep = () => setStep(step + 1);
 
   const storeHeaderAndContinue = () => {
-      const op1Num = Number(op1);
-      const op2Num = Number(op2);
-
-      let mm1Text = "";
-
-
-      if (flowDirection === "left-to-right") {
-          mm1Text = `[MM1]\nTEXT="OP${op1Num} ${workpieceNumber}"\n;\n`;
-        
-      } else {
-          mm1Text = `[MM1]\nTEXT="OP${op2Num} ${workpieceNumber}"\n;\n`;
-
-      }
-
-      setMmkHeader(`[MM0]\nTEXT="${workpieceNumber}"\n;\n` + mm1Text);
-      nextStep();
+    const op1Num = Number(op1);
+    const op2Num = Number(op2);
+  
+    if (op1 === "") {
+      alert("Please enter a numerical value for Operation 1.");
+      return;
+    }
+  
+    if (operations === 2 &&  op2 === "") {
+      alert("Please enter a numerical value for Operation 2.");
+      return;
+    }
+  
+    let mm1Text = "";
+  
+    if (flowDirection === "left-to-right") {
+      mm1Text = `[MM1]\nTEXT="OP${op1Num} ${workpieceNumber}"\n;\n`;
+    } else {
+      mm1Text = `[MM1]\nTEXT="OP${op2Num} ${workpieceNumber}"\n;\n`;
+    }
+  
+    setMmkHeader(`[MM0]\nTEXT="${workpieceNumber}"\n;\n` + mm1Text);
+    nextStep();
   };
 
 
@@ -138,7 +154,7 @@ FAKTOR=100
         <input
           type="text"
           value={op1}
-          onChange={(e) => setOp1(e.target.value)}
+          onChange={(e) => handleOpChange(e, setOp1)}
           className="input"
           placeholder="Operation 1"
         /></div>
@@ -147,7 +163,7 @@ FAKTOR=100
           <input
             type="text"
             value={op2}
-            onChange={(e) => setOp2(e.target.value)}
+            onChange={(e) => handleOpChange(e, setOp2)}
             className="input"
             placeholder="Operation 2"
           />
