@@ -1,6 +1,5 @@
 "use client";
-import React from "react";
-import { useState } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function MMKCreator() {
@@ -22,6 +21,21 @@ export default function MMKCreator() {
     cuttingEdge: "1",
     axis: "1"
   });
+
+  const nextButtonRef = useRef(null);
+
+  useEffect(() => {
+    const handleKeyPress = (event) => {
+      if (event.key === "Enter" && nextButtonRef.current) {
+        nextButtonRef.current.click();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyPress);
+    return () => {
+      document.removeEventListener("keydown", handleKeyPress);
+    };
+  }, [step]);
 
   const togglePostSelection = (post, operation) => {
     if (operation === 1) {
@@ -45,6 +59,15 @@ export default function MMKCreator() {
         alert("Please enter a numerical value.");
       }
     };
+
+    const handleOpName = () => {
+      if (workpieceNumber !== "") {
+        setStep(2);
+      } else {
+        alert("This field cannot be blank. Please enter workpiece name/number.");
+      }
+    };
+  
   
 
   const formatTools = (tools) => {
@@ -107,7 +130,7 @@ FAKTOR=100
             onChange={(e) => setWorkpieceNumber(e.target.value)}
           />
           </div>
-          <button onClick={nextStep} className="button">
+          <button onClick={handleOpName} className="button" ref={nextButtonRef}>
             Next
           </button>
         </div>
@@ -138,7 +161,7 @@ FAKTOR=100
               </select>
             </>
           )}
-          <button onClick={nextStep} className="button">
+          <button onClick={nextStep} className="button" ref={nextButtonRef}>
             Next
           </button>
         </div>
@@ -170,7 +193,7 @@ FAKTOR=100
         )}
         </div>
         <div>
-        <button onClick={storeHeaderAndContinue} className="button">
+        <button onClick={storeHeaderAndContinue} className="button" ref={nextButtonRef}>
           Next
         </button>
         </div>
@@ -187,6 +210,7 @@ FAKTOR=100
                 key={`op1-${post}`}
                 onClick={() => togglePostSelection(post, 1)}
                 className={`button ${selectedPostsOp1.includes(post) ? "selected" : ""}`}
+                ref={nextButtonRef}
               >
                 Post {post} {selectedPostsOp1.includes(post) ? "✔" : ""}
               </button>
@@ -201,6 +225,7 @@ FAKTOR=100
                     key={`op2-${post}`}
                     onClick={() => togglePostSelection(post, 2)}
                     className={`button ${selectedPostsOp2.includes(post) ? "selected" : ""}`}
+                    ref={nextButtonRef}
                   >
                     Post {post} {selectedPostsOp2.includes(post) ? "✔" : ""}
                   </button>
@@ -211,6 +236,7 @@ FAKTOR=100
           <button
             onClick={() => setStep(5)}
             className="button"
+            ref={nextButtonRef}
           >
             Next
           </button>
@@ -267,6 +293,7 @@ FAKTOR=100
 
             {/* Next Tool Button */}
             <button
+              ref={nextButtonRef}
               className="button"
               onClick={() => {
                   setTools((prevTools) => {

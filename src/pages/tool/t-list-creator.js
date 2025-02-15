@@ -1,6 +1,5 @@
 "use client";
-import React from "react";
-import { useState } from "react";
+import React, { useRef, useEffect, useState } from "react";
 
 
 export default function TListCreator() {
@@ -63,6 +62,21 @@ export default function TListCreator() {
     ;
 
   const nextStep = () => setStep((prev) => prev + 1);
+
+  const nextButtonRef = useRef(null);
+
+  useEffect(() => {
+    const handleKeyPress = (event) => {
+      if (event.key === "Enter" && nextButtonRef.current) {
+        nextButtonRef.current.click();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyPress);
+    return () => {
+      document.removeEventListener("keydown", handleKeyPress);
+    };
+  }, [step]);
 
   const togglePostSelection = (post, operation) => {
     if (operation === 1) {
@@ -291,7 +305,7 @@ T_LOAD              ; Cycle load Tool data ;*RO*
               </select>
             </>
           )}
-          <button onClick={nextStep} className= "button">
+          <button ref={nextButtonRef} onClick={nextStep} className= "button">
             Next
           </button>
         </div>
@@ -323,7 +337,7 @@ T_LOAD              ; Cycle load Tool data ;*RO*
           )}
           </div>
           <div>
-          <button onClick={nextStep} className= "button">
+          <button ref={nextButtonRef} onClick={nextStep} className= "button">
             Next
           </button>
           </div>
@@ -413,6 +427,7 @@ T_LOAD              ; Cycle load Tool data ;*RO*
             onChange={(e) => setToolInput({ ...toolInput, cuttingEdge: e.target.value })}
           />
           <button
+            ref={nextButtonRef}
             className="button"
             onClick={handleSaveTool}
           >
@@ -445,6 +460,7 @@ T_LOAD              ; Cycle load Tool data ;*RO*
               onChange={(e) => setToolInput({ ...toolInput, cuttingEdge: e.target.value })}
             />
             <button
+              ref={nextButtonRef}
               className="button"
               onClick={handleSaveTool2}
             >
@@ -469,6 +485,7 @@ T_LOAD              ; Cycle load Tool data ;*RO*
             ))}
           </select>
           <button
+          ref={nextButtonRef}
           className="button"
             onClick={handleToolSave} // Move to operation 2 tool questions or final step
           >
@@ -493,6 +510,7 @@ T_LOAD              ; Cycle load Tool data ;*RO*
             ))}
           </select>
           <button
+            ref={nextButtonRef}
             className="button"
             onClick={handleToolSave} // Move to the final step
           >
