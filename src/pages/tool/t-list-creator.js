@@ -110,26 +110,28 @@ export default function TListCreator() {
   }, [step]);
 
   const togglePostSelection = (post, operation, isProbe = false) => {
-      if (operation === 1) {
-          setSelectedPostsOp1((prev) => {
-              if (!isProbe) {
-                  return prev.includes(post) ? prev.filter((p) => p !== post) : [...prev, post];
-              } else {
-                  return prev.includes(post) ? prev : [...prev, post]; // Prevent duplicates
-              }
-          });
-      } else {
-          setSelectedPostsOp2((prev) => {
-              if (!isProbe) {
-                  return prev.includes(post) ? prev.filter((p) => p !== post) : [...prev, post];
-              } else {
-                  return prev.includes(post) ? prev : [...prev, post]; // Prevent duplicates
-              }
-          });
-      }
-  };
-
-
+          if (operation === 1) {
+              setSelectedPostsOp1((prev) => {
+                  let updated;
+                  if (!isProbe) {
+                      updated = prev.includes(post) ? prev.filter((p) => p !== post) : [...prev, post];
+                  } else {
+                      updated = prev.includes(post) ? prev : [...prev, post]; // Ensure probe is added but not removed accidentally
+                  }
+                  return updated.sort((a, b) => a - b); // ✅ Always sort in ascending order
+              });
+          } else {
+              setSelectedPostsOp2((prev) => {
+                  let updated;
+                  if (!isProbe) {
+                      updated = prev.includes(post) ? prev.filter((p) => p !== post) : [...prev, post];
+                  } else {
+                      updated = prev.includes(post) ? prev : [...prev, post]; // Ensure probe is added but not removed accidentally
+                  }
+                  return updated.sort((a, b) => a - b); // ✅ Always sort in ascending order
+              });
+          }
+      };
   const handleToolSave = () => {
     const post =
       currentToolIndex < selectedPostsOp1.length
