@@ -12,13 +12,17 @@
     "autoprefixer": "^10.4.20",
     "card": "^2.5.4",
     "classnames": "^2.5.1",
+    "glob": "^11.0.1",
+    "inflight": "^1.0.6",
     "init": "^0.1.2",
     "lucide-react": "^0.475.0",
     "next": "15.1.6",
+    "node": "^23.8.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "shadcn-ui": "^0.9.4",
-    "util": "^0.12.5"
+    "util": "^0.12.5",
+    "uuid": "^11.0.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

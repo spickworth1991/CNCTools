@@ -22,44 +22,75 @@ export default function TListCreator() {
   });
   const [generatedCode, setGeneratedCode] = useState({ tlist1: "", tlist2: "" });
 
-  const handleSaveTool = () => {
-    const post =selectedPostsOp1[currentToolIndex];
-    const op = op1;
-    const newTool = { post, op, ...toolInput };
-    setTools((prev) => [...prev, newTool]);
-    if (currentToolIndex + 1 < selectedPostsOp1.length) {
-      setCurrentToolIndex((prev) => prev + 1);
-    } else if (isProbeSelected1 && currentToolIndex + 1 === selectedPostsOp1.length && step !== 5) {
-      setStep(5);
-    } else if (operations === 1) {
-      setTools((prev) => {
-        const updatedTools = [...prev, newTool];
-        generateCode(updatedTools);
-        return updatedTools;
-      });
-      setStep(4.2);
+  const handleOpChange = (e, setOp) => {
+    const value = e.target.value;
+    if (!isNaN(value)) {
+      setOp(value);
+    } else {
+      alert("Please enter a numerical value.");
     }
   };
 
+  const handleSaveTool = () => {
+      const post = currentToolIndex < selectedPostsOp1.length ? selectedPostsOp1[currentToolIndex] : null;
+      if (!post) {
+        alert("Invalid tool index.");
+        return;
+      }
+      const op = op1;
+      const newTool = { post, op, ...toolInput };
+
+      setTools((prev) => [...prev, newTool]);
+
+      if (currentToolIndex + 1 < selectedPostsOp1.length) {
+        console.log("im here 1");
+        setCurrentToolIndex((prev) => prev + 1);
+      } else if (isProbeSelected1 && currentToolIndex + 1 === selectedPostsOp1.length) {
+        console.log("im here 2");
+        setStep(5);
+      } else if (operations === 1) {
+        console.log("im here 3");
+        setTools((prev) => {
+          const updatedTools = [...prev, newTool];
+          generateCode(updatedTools);
+          return updatedTools;
+        });
+        setStep(6);
+      } else if (operations === 2) {
+        console.log("im here 4");
+        setCurrentToolIndex(0); // Reset for Op2 tools
+        setStep(4.2);
+      }
+  };
+
+
   const handleSaveTool2 = () => {
-    const post =selectedPostsOp2[currentToolIndex];
-    const op = op2;
-    const newTool = { post, op, ...toolInput };
-    setTools((prev) => [...prev, newTool]);
-    if (currentToolIndex + 1 < selectedPostsOp2.length) {
-      setCurrentToolIndex((prev) => prev + 1); // Continue Op2 tools
-    } else if (isProbeSelected2 && currentToolIndex + 1 === selectedPostsOp2.length && step !== 5.2) {
-      setStep(5.2); // Move to Probe Op2 selection
-    } else {
-      setTools((prev) => {
-        const updatedTools = [...prev, newTool];
-        generateCode(updatedTools);
-        return updatedTools;
-      });
-      setStep(6); // Final step after tools & probe selection
-    }
-  }
-    ;
+      const post = selectedPostsOp2[currentToolIndex];
+      if (!post) {
+        alert("Invalid tool index.");
+        return;
+      }
+      const op = op2;
+      const newTool = { post, op, ...toolInput };
+
+      setTools((prev) => [...prev, newTool]);
+
+      if (currentToolIndex + 1 < selectedPostsOp2.length) {
+        console.log("im here 1");
+        setCurrentToolIndex((prev) => prev + 1);
+      } else if (isProbeSelected2 && currentToolIndex + 1 === selectedPostsOp2.length) {
+        console.log("im here 2");
+        setStep(5.2);
+      } else {
+        console.log("im here 3");
+        setTools((prev) => {
+          const updatedTools = [...prev, newTool];
+          generateCode(updatedTools);
+          return updatedTools;
+        });
+        setStep(6);
+      }
+  };
 
   const nextStep = () => setStep((prev) => prev + 1);
 
@@ -78,19 +109,26 @@ export default function TListCreator() {
     };
   }, [step]);
 
-  const togglePostSelection = (post, operation) => {
-    if (operation === 1) {
-      setSelectedPostsOp1((prev) => {
-        const updated = prev.includes(post) ? prev.filter((p) => p !== post) : [...prev, post];
-        return [...updated]; // Ensure a new array reference for state update
-      });
-    } else {
-      setSelectedPostsOp2((prev) => {
-        const updated = prev.includes(post) ? prev.filter((p) => p !== post) : [...prev, post];
-        return [...updated]; // Ensure a new array reference for state update
-      });
-    }
+  const togglePostSelection = (post, operation, isProbe = false) => {
+      if (operation === 1) {
+          setSelectedPostsOp1((prev) => {
+              if (!isProbe) {
+                  return prev.includes(post) ? prev.filter((p) => p !== post) : [...prev, post];
+              } else {
+                  return prev.includes(post) ? prev : [...prev, post]; // Prevent duplicates
+              }
+          });
+      } else {
+          setSelectedPostsOp2((prev) => {
+              if (!isProbe) {
+                  return prev.includes(post) ? prev.filter((p) => p !== post) : [...prev, post];
+              } else {
+                  return prev.includes(post) ? prev : [...prev, post]; // Prevent duplicates
+              }
+          });
+      }
   };
+
 
   const handleToolSave = () => {
     const post =
@@ -102,9 +140,9 @@ export default function TListCreator() {
     const newTool = { post, op, ...toolInput };
     setTools((prev) => [...prev, newTool]);
 
-  
+    setTimeout
     if (operations === 1) {
-      if (step === 5) {
+      if (step === 5 || step ===4) {
         setTools((prev) => {
           const updatedTools = [...prev, newTool];
           generateCode(updatedTools);
@@ -130,7 +168,7 @@ export default function TListCreator() {
 
   
 
-  const generateCode = (tools) => {
+  const generateCode = (_tools) => {
     const generateHeaderOp1 = () => `;                - EMAG -
 ;------------------------------------------------
 ; Siemens tool management
@@ -258,8 +296,9 @@ T_LOAD              ; Cycle load Tool data ;*RO*
     };
   
   
-    const toolsOp1 = tools.filter((tool) => String(tool.op) === String(op1));
-    const toolsOp2 = tools.filter((tool) => String(tool.op) === String(op2));
+    const toolsOp1 = _tools.filter((tool) => String(tool.op) === String(op1));
+    const toolsOp2 = _tools.filter((tool) => String(tool.op) === String(op2));
+
   
     const op1IsFirst = flowDirection === "left-to-right";
     const tlist1 =
@@ -314,32 +353,48 @@ T_LOAD              ; Cycle load Tool data ;*RO*
       {step === 2 && (
         <div>
           <div>
-          <label className="question">Enter Operation Number(s):</label>
+            <label className="question">Enter Operation Number(s):</label>
           </div>
           <div>
-          <input
-            className="input"
-            type="text"
-            value={op1}
-            onChange={(e) => setOp1(e.target.value)}
-            placeholder="Operation 1"
-          />
-          </div>
-          <div>
-          {operations === 2 && (
             <input
               className="input"
               type="text"
-              value={op2}
-              onChange={(e) => setOp2(e.target.value)}
-              placeholder="Operation 2"
+              value={op1}
+              onChange={(e) => handleOpChange(e, setOp1)}
+              placeholder="Operation 1"
             />
-          )}
           </div>
           <div>
-          <button ref={nextButtonRef} onClick={nextStep} className= "button">
-            Next
-          </button>
+            {operations === 2 && (
+              <input
+                className="input"
+                type="text"
+                value={op2}
+                onChange={(e) => handleOpChange(e, setOp2)}
+                placeholder="Operation 2"
+              />
+            )}
+          </div>
+          <div>
+            <button
+              ref={nextButtonRef}
+              className="button"
+              onClick={() => {
+                if (op1 === "") {
+                  alert("Please enter a numerical value for Operation 1.");
+                  return;
+                }
+
+                if (operations === 2 && op2 === "") {
+                  alert("Please enter a numerical value for Operation 2.");
+                  return;
+                } else {
+                  nextStep();
+                }
+              }}
+            >
+              Next
+            </button>
           </div>
         </div>
       )}
@@ -362,11 +417,20 @@ T_LOAD              ; Cycle load Tool data ;*RO*
           {/* PROBE BUTTON */}
           <button
             key="probe"
-            onClick={() => setIsProbeSelected1(!isProbeSelected1)}
-            className= {`button ${isProbeSelected1 ? "selected" : ""}`}
+            onClick={() => {
+              setIsProbeSelected1((prev) => !prev);
+              if (!isProbeSelected1 && selectedProbePostOp1) {
+                togglePostSelection(selectedProbePostOp1, 1, true);
+              } else {
+                setSelectedPostsOp1((prevPosts) => prevPosts.filter((p) => p !== selectedProbePostOp1));
+              }
+            }}
+            className={`button ${isProbeSelected1 ? "selected" : ""}`}
           >
             Probe {isProbeSelected1 ? "✔" : ""}
           </button>
+
+
         </div>
           {operations === 2 && (
             <>
@@ -383,19 +447,35 @@ T_LOAD              ; Cycle load Tool data ;*RO*
                 
                 ))}
               {/* PROBE BUTTON */}
-                <button
-                  key="probe"
-                  onClick={() => setIsProbeSelected2(!isProbeSelected2)}
-                  className= {`button ${isProbeSelected2 ? "selected" : ""}`}
-                >
-                  Probe {isProbeSelected2 ? "✔" : ""}
-                </button>
+              <button
+                key="probe"
+                onClick={() => {
+                  setIsProbeSelected2((prev) => !prev);
+                  if (!isProbeSelected2 && selectedProbePostOp2) {
+                    togglePostSelection(selectedProbePostOp2, 2, true);
+                  } else {
+                    setSelectedPostsOp2((prevPosts) => prevPosts.filter((p) => p !== selectedProbePostOp2));
+                  }
+                }}
+                className={`button ${isProbeSelected2 ? "selected" : ""}`}
+              >
+                Probe {isProbeSelected2 ? "✔" : ""}
+              </button>
               </div>
             </>
           )}
           <button
-            onClick={nextStep}
-            className= "button"
+            ref={nextButtonRef}
+            className="button"
+            onClick={() => {
+              if (selectedPostsOp1.length === 0) {
+                alert("Please select a tool post for turret 1.");
+              } else if (operations === 2 && selectedPostsOp2.length === 0) {
+                alert("Please select a tool post for turret 2.");
+              } else {
+                nextStep();
+              }
+            }}
           >
             Next
           </button>
