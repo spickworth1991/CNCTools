@@ -34,6 +34,24 @@ export default function HomePage() {
           <p className="text-gray-500 text-sm text-center">Generate T-List programs for Siemens CNC.</p>
         </div>
 
+        {/* Calculators */}
+        <div 
+          className="card cursor-pointer flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-lg hover:scale-105 transition"
+          onClick={() => router.push("tool/calculators")}
+        >
+          <h3 className="text-lg font-semibold">Calculators</h3>
+          <p className="text-gray-500 text-sm text-center">Calculators for specific things.</p>
+        </div>
+
+        {/* NC Viewer */}
+        <div 
+          className="card cursor-pointer flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-lg hover:scale-105 transition"
+          onClick={() => window.location.href = "https://ncviewer.com"}
+        >
+          <h3 className="text-lg font-semibold">NC Viewer</h3>
+          <p className="text-gray-500 text-sm text-center">Simulate tool paths with NCViewer.com</p>
+        </div>
+
       </div>
     </div>
   );

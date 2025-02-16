@@ -1,8 +1,10 @@
 "use client";
 import React, { useRef, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 
 export default function TListCreator() {
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [operations, setOperations] = useState(1);
   const [flowDirection, setFlowDirection] = useState("left-to-right");
@@ -349,6 +351,12 @@ T_LOAD              ; Cycle load Tool data ;*RO*
           <button ref={nextButtonRef} onClick={nextStep} className= "button">
             Next
           </button>
+          <button
+          onClick={() => router.push(`/`)}
+          className="button"
+        >
+          Home
+        </button>
         </div>
       )}
 
@@ -396,6 +404,12 @@ T_LOAD              ; Cycle load Tool data ;*RO*
               }}
             >
               Next
+            </button>
+            <button
+              onClick={() => router.push(`/`)}
+              className="button"
+            >
+              Home
             </button>
           </div>
         </div>
@@ -467,20 +481,26 @@ T_LOAD              ; Cycle load Tool data ;*RO*
             </>
           )}
           <button
-            ref={nextButtonRef}
-            className="button"
-            onClick={() => {
-              if (selectedPostsOp1.length === 0) {
-                alert("Please select a tool post for turret 1.");
-              } else if (operations === 2 && selectedPostsOp2.length === 0) {
-                alert("Please select a tool post for turret 2.");
-              } else {
-                nextStep();
-              }
-            }}
-          >
-            Next
-          </button>
+              ref={nextButtonRef}
+              className="button"
+              onClick={() => {
+                if (selectedPostsOp1.length === 0) {
+                  alert("Please select a tool post for turret 1.");
+                } else if (operations === 2 && selectedPostsOp2.length === 0) {
+                  alert("Please select a tool post for turret 2.");
+                } else {
+                  nextStep();
+                }
+              }}
+            >
+              Next
+            </button>
+            <button
+              onClick={() => router.push(`/`)}
+              className="button"
+            >
+              Home
+            </button>
         </div>
       )}
 
@@ -513,8 +533,14 @@ T_LOAD              ; Cycle load Tool data ;*RO*
             className="button"
             onClick={handleSaveTool}
           >
-            Save Tool
+            Save & Next Tool
           </button>
+          <button
+          onClick={() => router.push(`/`)}
+          className="button"
+        >
+          Home
+        </button>
         </div>
         )}
         {step === 4.2 && currentToolIndex  < selectedPostsOp1.length + selectedPostsOp2.length  &&  (
@@ -546,7 +572,13 @@ T_LOAD              ; Cycle load Tool data ;*RO*
               className="button"
               onClick={handleSaveTool2}
             >
-              Save Tool
+              Save & Next Tool
+              </button>
+              <button
+              onClick={() => router.push(`/`)}
+              className="button"
+            >
+              Home
             </button>
           </div>
 
@@ -573,6 +605,12 @@ T_LOAD              ; Cycle load Tool data ;*RO*
           >
             Next
           </button>
+          <button
+              onClick={() => router.push(`/`)}
+              className="button"
+            >
+              Home
+            </button>
         </div>
       )}
 
@@ -598,6 +636,12 @@ T_LOAD              ; Cycle load Tool data ;*RO*
           >
             Next
           </button>
+          <button
+              onClick={() => router.push(`/`)}
+              className="button"
+            >
+              Home
+            </button>
         </div>
       )}
 

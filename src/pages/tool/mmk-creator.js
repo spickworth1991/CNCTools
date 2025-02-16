@@ -133,6 +133,12 @@ FAKTOR=100
           <button onClick={handleOpName} className="button" ref={nextButtonRef}>
             Next
           </button>
+          <button
+                onClick={() => router.push(`/`)}
+                className="button"
+              >
+                Home
+              </button>
         </div>
       )}
 
@@ -164,6 +170,12 @@ FAKTOR=100
           <button onClick={nextStep} className="button" ref={nextButtonRef}>
             Next
           </button>
+          <button
+                onClick={() => router.push(`/`)}
+                className="button"
+              >
+                Home
+              </button>
         </div>
       )}
 
@@ -196,6 +208,12 @@ FAKTOR=100
         <button onClick={storeHeaderAndContinue} className="button" ref={nextButtonRef}>
           Next
         </button>
+        <button
+        onClick={() => router.push(`/`)}
+        className="button"
+      >
+        Home
+      </button>
         </div>
       </div>
       )}
@@ -248,6 +266,12 @@ FAKTOR=100
           >
             Next
           </button>
+          <button
+          onClick={() => router.push(`/`)}
+          className="button"
+        >
+          Home
+        </button>
         </div>
       )}
 
@@ -451,6 +475,12 @@ FAKTOR=100
             >
               Save & Next Tool
             </button>
+            <button
+                onClick={() => router.push(`/`)}
+                className="button"
+              >
+                Home
+              </button>
 
         </div>
         )}
