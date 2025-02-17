@@ -16,23 +16,15 @@ export default function HomePage() {
       {/* Grid for Tool Options */}
       <div>
         
-        {/* MMK Creator */}
+        {/* Siemens Programming */}
         <div 
           className="card"
-          onClick={() => router.push("tool/mmk-creator")}
+          onClick={() => router.push("../programs")}
         >
-          <h3>MMK Creator</h3>
-          <p>Generate standard MMK programs for tool correction.</p>
+          <h3>Siemens Programs</h3>
+          <p>Generate generic Emag Siemens NC programs used in Auto.</p>
         </div>
 
-        {/* T_List Creator */}
-        <div 
-          className="card"
-          onClick={() => router.push("tool/t-list-creator")}
-        >
-          <h3>T_List Creator</h3>
-          <p>Generate T-List programs for Siemens CNC.</p>
-        </div>
 
         {/* Calculators */}
         <div 
