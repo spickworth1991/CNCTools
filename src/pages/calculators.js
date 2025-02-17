@@ -40,7 +40,7 @@ export default function calculator() {
           onClick={() => router.push("./wip")}
         >
           <h3>More to come</h3>
-          <p>If yu have ideas share them.</p>
+          <p>If you have ideas share them.</p>
         </div>
 
         {/* Home */}
