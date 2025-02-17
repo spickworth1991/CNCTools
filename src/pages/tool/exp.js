@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function ExperienceCalculator() {
+    const router = useRouter();
     const [controlCut, setControlCut] = useState("");
     const [finishPart, setFinishPart] = useState("");
     const [cmmMeasurement, setCmmMeasurement] = useState("");
