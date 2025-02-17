@@ -1,13 +1,16 @@
-import "../styles/styles.css"; // Make sure this path is correct
+import "../styles/styles.css"; // Ensure the path to styles is correct
 import React from "react"; // Import React
+import Head from "next/head"; // Import Head for managing the document head
 
-// eslint-disable-next-line react/prop-types
 function MyApp({ Component, pageProps }) {
-
+  return (
+    <>
       <Head>
         <link rel="icon" href="/favicon.ico" />
       </Head>
-  return <Component {...pageProps} />;
+      <Component {...pageProps} />
+    </>
+  );
 }
 
 export default MyApp;
