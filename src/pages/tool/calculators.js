@@ -19,7 +19,7 @@ export default function calculator() {
         {/* Prism Calc */}
         <div 
           className="card cursor-pointer flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-lg hover:scale-105 transition"
-          onClick={() => router.push("../wip")}
+          onClick={() => router.push("./prism")}
         >
           <h3 className="text-lg font-semibold">Prism Calculator</h3>
           <p className="text-gray-500 text-sm text-center">If your using a prism to load your operation.</p>

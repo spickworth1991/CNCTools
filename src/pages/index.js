@@ -6,11 +6,11 @@ export default function HomePage() {
   const router = useRouter();
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-6">
+    <div className="">
       {/* Main Container */}
-      <div className="flex flex-col items-center text-center">
-        <h1 className="text-4xl font-bold text-gray-800 mb-4">CNC Tool Generator</h1>
-        <p className="text-lg text-gray-600 mb-8">Select a tool to begin creating your CNC programs.</p>
+      <div className="">
+        <h1 className="">CNC Tool Generator</h1>
+        <p className="">Select a tool to begin.</p>
       </div>
 
       {/* Grid for Tool Options */}
