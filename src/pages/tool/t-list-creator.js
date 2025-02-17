@@ -715,11 +715,11 @@ T_LOAD              ; Cycle load Tool data ;*RO*
               Copy T_LIST2
             </button>
             <button
-              className="button"
-              onClick={() => window.location.href = "/"}
-            >
-              Home
-            </button>
+                onClick={() => router.push(`/`)}
+                className="button"
+              >
+                Home
+              </button>
           </div>
         </div>
       </div>

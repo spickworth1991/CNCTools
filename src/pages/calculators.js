@@ -28,10 +28,19 @@ export default function calculator() {
         {/* Probe Calc */}
         <div 
           className="card"
-          onClick={() => router.push("./wip")}
+          onClick={() => router.push("./tool/exp")}
         >
           <h3>Control Cut/Probe Calculator</h3>
           <p>Calculate Experience values with ease.</p>
+        </div>
+
+        {/* New Calc */}
+        <div 
+          className="card"
+          onClick={() => router.push("./wip")}
+        >
+          <h3>More to come</h3>
+          <p>If yu have ideas share them.</p>
         </div>
 
         {/* Home */}
