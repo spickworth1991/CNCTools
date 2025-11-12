@@ -19,11 +19,21 @@ export default function HomePage() {
         {/* Siemens Programming */}
         <div 
           className="card"
-          onClick={() => router.push("../programs")}
+          onClick={() => router.push("../siemens")}
         >
           <h3>Siemens Programs</h3>
-          <p>Generate generic Emag Siemens NC programs used in Auto.</p>
+          <p>Generate generic Emag Siemens NC programs.</p>
         </div>
+
+        {/* Fanuc Programs */}
+        <div
+          className="card"
+          onClick={() => router.push("../fanuc")}
+        >
+          <h3>Fanuc Programs</h3>
+          <p>Build EMAG-style Fanuc NC programs (4000-series, compensation screens, etc.).</p>
+        </div>
+
 
 
         {/* Calculators */}
