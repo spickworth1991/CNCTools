@@ -1,0 +1,168 @@
+body {
+  background: linear-gradient(to bottom right, #e3f2fd, #90caf9);
+  font-family: "Inter", sans-serif;
+  text-align: center;
+  color: #374151; /* Dark gray for better contrast */
+}
+
+.h1 {
+  font-size: 2.2em;
+  font-weight: bold;
+}
+
+.h2 {
+  font-size: 1.6em;
+  font-weight: bold;
+}
+
+.h3 {
+  font-size: 1.2em;
+  font-weight: bold;
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  
+}
+
+.card {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  transition: transform 0.2s;
+  text-align: center;
+}
+
+.card:hover {
+  transform: scale(1.02);
+  background: #96c4f4;
+}
+
+.button {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 5px;
+  background: hwb(211 47% 7%);
+  color: white;
+  text-align: center;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s;
+  font-size: 1.0em;
+}
+
+.button:hover {
+  background: #0056b3;
+}
+
+.selected {
+  background-color: #186bde; /* Example: light gray background */
+  border: 2px solid #000; /* Example: black border */
+}
+
+.dropdown {
+  position: relative;
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 5px;
+  background: hwb(211 47% 7%);
+  color: white;
+  text-align: center;
+  font-weight: bold;
+  font-size: 1.0em;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: #f9f9f9;
+  min-width: 160px;
+  box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
+  font-weight: bold;
+  z-index: 1;
+  font-size: .8em;
+  text-align: center;
+}
+
+.question {
+  font-size: 1.2em;
+  font-weight: bold;
+}
+
+.input {
+  padding: 7px;
+  margin: 10px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  width: 400px;
+}
+
+.textarea {
+  padding: 10px;
+  margin: 5px;
+  border-radius: 15px;
+  border: 2px solid #1e6bcf;
+  width: 500px;
+  height: 200px;
+}
+/* Style the scrollbar */
+textarea::-webkit-scrollbar {
+  width: 10px; /* Width of the scrollbar */
+}
+
+/* Style the track */
+textarea::-webkit-scrollbar-track {
+  background: #90caf9; /* Color of the track */
+  border-radius: 10px; /* Rounded corners */
+}
+
+/* Style the handle */
+textarea::-webkit-scrollbar-thumb {
+  background: #1e6bcf; /* Color of the handle */
+  border-radius: 15px; /* Rounded corners */
+}
+
+/* Style the handle on hover */
+textarea::-webkit-scrollbar-thumb:hover {
+  background: #555; /* Color of the handle on hover */
+}
+
+.textarea:focus {
+  border-color: #0056b3;
+  box-shadow: 0 0 5px rgba(0, 86, 179, 0.5);
+  outline: none; /* Remove default outline */
+}
+
+/* Media query for mobile devices */
+@media (max-width: 600px) {
+  .container {
+    padding: 10px;
+  }
+
+  .input, .textarea {
+    width: 90%;
+    max-width: none; /* Remove maximum width */
+    font-size: 16px; /* Prevent zoom on mobile */
+  }
+
+  .button {
+    width: 100%;
+    padding: 10px;
+    font-size: 1.2em;
+  }
+
+  .h1 {
+    font-size: 1.8em;
+  }
+
+  .h2 {
+    font-size: 1.4em;
+  }
+
+  .h3 {
+    font-size: 1em;
+  }
+}
