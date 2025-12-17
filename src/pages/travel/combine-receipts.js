@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
-import heic2any from "heic2any";
 
 function fmtDate(d) {
   if (!d) return "";
@@ -16,12 +15,21 @@ async function fileToArrayBuffer(file) {
 }
 
 async function convertHeicToJpeg(file) {
+  // Safety: this MUST only run in the browser
+  if (typeof window === "undefined") {
+    throw new Error("HEIC conversion can only run in the browser.");
+  }
+
+  // ✅ Import only at runtime in the browser (prevents build crash)
+  const { default: heic2any } = await import("heic2any");
+
   const ab = await fileToArrayBuffer(file);
   const outBlob = await heic2any({
     blob: new Blob([ab], { type: file.type || "image/heic" }),
     toType: "image/jpeg",
-    quality: 0.9
+    quality: 0.9,
   });
+
   const blob = Array.isArray(outBlob) ? outBlob[0] : outBlob;
   const name = (file.name || "photo").replace(/\.(heic|heif)$/i, "") + ".jpg";
   return new File([blob], name, { type: "image/jpeg" });
@@ -95,8 +103,8 @@ export default function CombineReceiptsPage() {
           serviceReportNumber: serviceReportNumber.trim(),
           customerName: customerName.trim(),
           travelStart,
-          travelEnd
-        })
+          travelEnd,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to create project");
@@ -123,14 +131,14 @@ export default function CombineReceiptsPage() {
       let file = uploadFile;
 
       // HEIC/HEIF from iPhone → convert in browser to JPEG
-      const isHeic = /(\.heic|\.heif)$/i.test(file.name || "") || /image\/hei(c|f)/i.test(file.type || "");
+      const isHeic =
+        /(\.heic|\.heif)$/i.test(file.name || "") ||
+        /image\/hei(c|f)/i.test(file.type || "");
       if (isHeic) {
         file = await convertHeicToJpeg(file);
       }
 
       // We only support embedding JPEG/PNG in the PDF server-side.
-      // If someone selects WEBP/PDF, they can still upload it later once we add conversion;
-      // for now: block with a clear message.
       const ext = (file.name || "").toLowerCase();
       const ok =
         ext.endsWith(".jpg") ||
@@ -151,7 +159,7 @@ export default function CombineReceiptsPage() {
 
       const res = await fetch(`/api/travel/projects/${encodeURIComponent(selectedId)}/photos`, {
         method: "POST",
-        body: fd
+        body: fd,
       });
 
       const data = await res.json();
@@ -177,7 +185,7 @@ export default function CombineReceiptsPage() {
     setBusy("Generating PDF…");
     try {
       const res = await fetch(`/api/travel/projects/${encodeURIComponent(selectedId)}/close`, {
-        method: "POST"
+        method: "POST",
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Close failed");
@@ -264,11 +272,7 @@ export default function CombineReceiptsPage() {
           <hr style={{ margin: "16px 0" }} />
 
           <h3>Select Project</h3>
-          <select
-            className="input"
-            value={selectedId}
-            onChange={(e) => setSelectedId(e.target.value)}
-          >
+          <select className="input" value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
             <option value="">-- Select --</option>
 
             {openProjects.length ? <option disabled>— Open —</option> : null}
@@ -300,14 +304,26 @@ export default function CombineReceiptsPage() {
           ) : (
             <>
               <div style={{ marginBottom: 10 }}>
-                <div><strong>Service Report:</strong> {selected.serviceReportNumber}</div>
-                <div><strong>Customer:</strong> {selected.customerName}</div>
+                <div>
+                  <strong>Service Report:</strong> {selected.serviceReportNumber}
+                </div>
+                <div>
+                  <strong>Customer:</strong> {selected.customerName}
+                </div>
                 <div>
                   <strong>Travel Dates:</strong> {selected.travelStart} → {selected.travelEnd}
                 </div>
-                <div><strong>Status:</strong> {selected.status}</div>
-                <div><strong>Created:</strong> {fmtDate(selected.createdAt)}</div>
-                {selected.closedAt ? <div><strong>Closed:</strong> {fmtDate(selected.closedAt)}</div> : null}
+                <div>
+                  <strong>Status:</strong> {selected.status}
+                </div>
+                <div>
+                  <strong>Created:</strong> {fmtDate(selected.createdAt)}
+                </div>
+                {selected.closedAt ? (
+                  <div>
+                    <strong>Closed:</strong> {fmtDate(selected.closedAt)}
+                  </div>
+                ) : null}
               </div>
 
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
