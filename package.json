@@ -5,8 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "pages:build": "npx @cloudflare/next-on-pages@1",
-    "start": "next start"
+    "pages:build": "next-on-pages",
+    "preview": "wrangler pages dev .vercel/output/static",
+    "deploy": "wrangler pages deploy .vercel/output/static"
   },
   "dependencies": {
     "classnames": "^2.5.1",
