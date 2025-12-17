@@ -79,7 +79,7 @@ export async function POST(_req, { params }) {
 
       line("Service Report:", meta.serviceReportNumber);
       line("Customer:", meta.customerName);
-      line("Travel Dates:", `${meta.travelStart} → ${meta.travelEnd}`);
+      line("Travel Dates:", `${meta.travelStart} -> ${meta.travelEnd}`);
       line("Photos:", String(photos.length));
       line("Generated:", nowIso());
     }
