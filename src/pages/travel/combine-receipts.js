@@ -175,32 +175,53 @@ export default function CombineReceiptsPage() {
     }
   }
 
-  async function closeProject() {
-    if (!selectedId) return;
-    if (!confirm("Close this project and generate the PDF?")) return;
-
-    setBusy("Generating PDF…");
-    try {
-      const res = await fetch(`/api/travel/projects/${encodeURIComponent(selectedId)}/close`, {
-        method: "POST"
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Close failed");
-
-      await loadProject(selectedId);
-      await refreshProjects();
-
-      if (data?.downloadUrl) {
-        window.open(data.downloadUrl, "_blank");
-      } else {
-        alert("Closed. Use Download PDF button.");
-      }
-    } catch (err) {
-      alert(err?.message || String(err));
-    } finally {
-      setBusy("");
-    }
+  async function readJsonSafe(res) {
+  const text = await res.text();
+  try {
+    return { ok: res.ok, status: res.status, data: JSON.parse(text) };
+  } catch {
+    // Non-JSON response (common on Cloudflare when a Function throws)
+    return { ok: res.ok, status: res.status, data: null, raw: text };
   }
+}
+
+async function closeProject() {
+  if (!selectedId) return;
+  if (!confirm("Close this project and generate the PDF?")) return;
+
+  setBusy("Generating PDF…");
+  try {
+    const res = await fetch(`/api/travel/projects/${encodeURIComponent(selectedId)}/close`, {
+      method: "POST",
+    });
+
+    const parsed = await readJsonSafe(res);
+
+    if (!parsed.ok) {
+      // show the Cloudflare error text instead of “Unexpected token…”
+      const msg =
+        parsed.data?.error ||
+        parsed.raw ||
+        `Close failed (HTTP ${parsed.status})`;
+      throw new Error(msg);
+    }
+
+    const data = parsed.data || {};
+    await loadProject(selectedId);
+    await refreshProjects();
+
+    if (data?.downloadUrl) {
+      window.open(data.downloadUrl, "_blank");
+    } else {
+      alert("Closed. Use Download PDF button.");
+    }
+  } catch (err) {
+    alert(err?.message || String(err));
+  } finally {
+    setBusy("");
+  }
+}
+
 
   function downloadPdf() {
     if (!selectedId) return;
