@@ -1,4 +1,6 @@
+name = "cnc-tools"
 compatibility_date = "2025-12-17"
+compatibility_flags = ["nodejs_compat"]
 
 # next-on-pages outputs here
 pages_build_output_dir = ".vercel/output/static"
