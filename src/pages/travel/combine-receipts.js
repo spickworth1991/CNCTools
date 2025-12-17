@@ -1,18 +1,28 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
-
-function fmtDate(d) {
-  if (!d) return "";
-  try {
-    return new Date(d).toLocaleString();
-  } catch {
-    return String(d);
-  }
-}
+// ❌ DO NOT import heic2any at top-level (it references window during build)
+// import heic2any from "heic2any";
 
 async function fileToArrayBuffer(file) {
   return await file.arrayBuffer();
 }
+
+async function convertHeicToJpeg(file) {
+  // ✅ Import only in the browser at runtime
+  const { default: heic2any } = await import("heic2any");
+
+  const ab = await fileToArrayBuffer(file);
+  const outBlob = await heic2any({
+    blob: new Blob([ab], { type: file.type || "image/heic" }),
+    toType: "image/jpeg",
+    quality: 0.9,
+  });
+
+  const blob = Array.isArray(outBlob) ? outBlob[0] : outBlob;
+  const name = (file.name || "photo").replace(/\.(heic|heif)$/i, "") + ".jpg";
+  return new File([blob], name, { type: "image/jpeg" });
+}
+
 
 async function convertHeicToJpeg(file) {
   // Safety: this MUST only run in the browser
