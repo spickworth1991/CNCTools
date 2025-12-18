@@ -1,5 +1,8 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
+    const [locationCity, setLocationCity] = useState("");
+    const [locationState, setLocationState] = useState("");
+    const [travelStartDateTime, setTravelStartDateTime] = useState("");
 
 function fmtDate(d) {
   if (!d) return "";
@@ -164,10 +167,6 @@ export default function CombineReceiptsPage() {
     setBusy("Uploading…");
     try {
       let file = uploadFile;
-      
-      const [locationCity, setLocationCity] = useState("");
-    const [locationState, setLocationState] = useState("");
-    const [travelStartDateTime, setTravelStartDateTime] = useState("");
 
       const isHeic =
         /(\.heic|\.heif)$/i.test(file.name || "") ||
