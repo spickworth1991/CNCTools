@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
+import heic2any from "heic2any";
 
 function fmtDate(d) {
   if (!d) return "";
@@ -10,68 +11,56 @@ function fmtDate(d) {
   }
 }
 
+function todayYYYYMMDD() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 async function fileToArrayBuffer(file) {
   return await file.arrayBuffer();
 }
 
-function isHeicLike(file) {
-  const name = (file?.name || "").toLowerCase();
-  const type = (file?.type || "").toLowerCase();
-  return name.endsWith(".heic") || name.endsWith(".heif") || type.includes("image/heic") || type.includes("image/heif");
-}
-
-function isJpgOrPng(file) {
-  const name = (file?.name || "").toLowerCase();
-  const type = (file?.type || "").toLowerCase();
-  return (
-    name.endsWith(".jpg") ||
-    name.endsWith(".jpeg") ||
-    name.endsWith(".png") ||
-    type === "image/jpeg" ||
-    type === "image/png"
-  );
-}
-
 async function convertHeicToJpeg(file) {
-  // Dynamic import so it never runs during SSR/build
-  const { default: heic2any } = await import("heic2any");
-
   const ab = await fileToArrayBuffer(file);
   const outBlob = await heic2any({
     blob: new Blob([ab], { type: file.type || "image/heic" }),
     toType: "image/jpeg",
     quality: 0.9,
   });
-
   const blob = Array.isArray(outBlob) ? outBlob[0] : outBlob;
-  const base = (file.name || "photo").replace(/\.(heic|heif)$/i, "");
-  return new File([blob], `${base}.jpg`, { type: "image/jpeg" });
+  const name = (file.name || "photo").replace(/\.(heic|heif)$/i, "") + ".jpg";
+  return new File([blob], name, { type: "image/jpeg" });
 }
 
 async function convertAnyImageToJpeg(file) {
-  // For webp/gif/etc: decode in browser and re-encode jpeg
-  const ab = await file.arrayBuffer();
-  const blobUrl = URL.createObjectURL(new Blob([ab], { type: file.type || "application/octet-stream" }));
-
+  // For things like WEBP, GIF, BMP, etc. (anything the browser can decode)
+  const blobUrl = URL.createObjectURL(file);
   try {
-    const bitmap = await createImageBitmap(await fetch(blobUrl).then(r => r.blob()));
-    const canvas = document.createElement("canvas");
-    canvas.width = bitmap.width;
-    canvas.height = bitmap.height;
-
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(bitmap, 0, 0);
-
-    const jpegBlob = await new Promise((resolve, reject) => {
-      canvas.toBlob(
-        (b) => (b ? resolve(b) : reject(new Error("Failed to convert image"))),
-        "image/jpeg",
-        0.9
-      );
+    const img = await new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = reject;
+      i.src = blobUrl;
     });
 
-    const base = (file.name || "photo").replace(/\.[^.]+$/i, "");
-    return new File([jpegBlob], `${base}.jpg`, { type: "image/jpeg" });
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth || img.width;
+    canvas.height = img.naturalHeight || img.height;
+
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+
+    const blob = await new Promise((resolve) =>
+      canvas.toBlob((b) => resolve(b), "image/jpeg", 0.9)
+    );
+
+    if (!blob) throw new Error("Conversion failed.");
+
+    const base = (file.name || "photo").replace(/\.[^.]+$/, "");
+    return new File([blob], `${base}.jpg`, { type: "image/jpeg" });
   } finally {
     URL.revokeObjectURL(blobUrl);
   }
@@ -88,7 +77,9 @@ export default function CombineReceiptsPage() {
   const [serviceReportNumber, setServiceReportNumber] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [travelStart, setTravelStart] = useState("");
-  const [travelEnd, setTravelEnd] = useState("");
+
+  // Close form
+  const [travelEndClose, setTravelEndClose] = useState(todayYYYYMMDD());
 
   // Upload form
   const [uploadTitle, setUploadTitle] = useState("");
@@ -115,6 +106,11 @@ export default function CombineReceiptsPage() {
     const res = await fetch(`/api/travel/projects/${encodeURIComponent(id)}`, { method: "GET" });
     const data = await res.json();
     setSelected(data.project || null);
+
+    // Keep the close-date input synced
+    const proj = data.project || null;
+    if (proj?.travelEnd) setTravelEndClose(proj.travelEnd);
+    else setTravelEndClose(todayYYYYMMDD());
   }
 
   useEffect(() => {
@@ -145,7 +141,6 @@ export default function CombineReceiptsPage() {
           serviceReportNumber: serviceReportNumber.trim(),
           customerName: customerName.trim(),
           travelStart,
-          travelEnd,
         }),
       });
       const data = await res.json();
@@ -154,7 +149,6 @@ export default function CombineReceiptsPage() {
       setServiceReportNumber("");
       setCustomerName("");
       setTravelStart("");
-      setTravelEnd("");
     } catch (err) {
       alert(err?.message || String(err));
     } finally {
@@ -172,12 +166,39 @@ export default function CombineReceiptsPage() {
     try {
       let file = uploadFile;
 
-      // HEIC/HEIF -> JPEG
-      if (isHeicLike(file)) {
+      // HEIC/HEIF → convert to JPEG
+      const isHeic =
+        /(\.heic|\.heif)$/i.test(file.name || "") ||
+        /image\/hei(c|f)/i.test(file.type || "");
+      if (isHeic) {
         file = await convertHeicToJpeg(file);
-      } else if (!isJpgOrPng(file)) {
-        // Any other image type (webp/gif/etc) -> JPEG so PDF always works
+      }
+
+      // If it’s not JPG/PNG, try converting to JPG via canvas
+      const lowerName = (file.name || "").toLowerCase();
+      const isJpgPng =
+        lowerName.endsWith(".jpg") ||
+        lowerName.endsWith(".jpeg") ||
+        lowerName.endsWith(".png") ||
+        file.type === "image/jpeg" ||
+        file.type === "image/png";
+
+      if (!isJpgPng) {
         file = await convertAnyImageToJpeg(file);
+      }
+
+      // Final allowlist for server-side PDF embedding
+      const ext = (file.name || "").toLowerCase();
+      const ok =
+        ext.endsWith(".jpg") ||
+        ext.endsWith(".jpeg") ||
+        ext.endsWith(".png") ||
+        file.type === "image/jpeg" ||
+        file.type === "image/png";
+
+      if (!ok) {
+        alert("Please upload an image file your browser can convert (or use JPG/PNG/HEIC).");
+        return;
       }
 
       const fd = new FormData();
@@ -189,23 +210,6 @@ export default function CombineReceiptsPage() {
         method: "POST",
         body: fd,
       });
-      // WEBP → JPEG (browser can decode WEBP into canvas)
-      const isWebp =
-        /(\.webp)$/i.test(file.name || "") || /image\/webp/i.test(file.type || "");
-
-      if (isWebp) {
-        const bmp = await createImageBitmap(file);
-        const canvas = document.createElement("canvas");
-        canvas.width = bmp.width;
-        canvas.height = bmp.height;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(bmp, 0, 0);
-        const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
-        const name = (file.name || "photo").replace(/\.webp$/i, "") + ".jpg";
-        file = new File([blob], name, { type: "image/jpeg" });
-      }
-
-
 
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Upload failed");
@@ -225,26 +229,23 @@ export default function CombineReceiptsPage() {
 
   async function closeProject() {
     if (!selectedId) return;
+    if (!travelEndClose) return alert("Pick a Travel End date.");
     if (!confirm("Close this project and generate the PDF?")) return;
 
     setBusy("Generating PDF…");
     try {
       const res = await fetch(`/api/travel/projects/${encodeURIComponent(selectedId)}/close`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ travelEnd: travelEndClose }),
       });
-
-      // IMPORTANT: close route now always returns JSON
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Close failed");
 
       await loadProject(selectedId);
       await refreshProjects();
 
-      if (data?.downloadUrl) {
-        window.open(data.downloadUrl, "_blank");
-      } else {
-        alert("Closed. Use Download PDF button.");
-      }
+      if (data?.downloadUrl) window.open(data.downloadUrl, "_blank");
     } catch (err) {
       alert(err?.message || String(err));
     } finally {
@@ -271,6 +272,7 @@ export default function CombineReceiptsPage() {
       ) : null}
 
       <div className="grid" style={{ alignItems: "start" }}>
+        {/* LEFT: Create + Select */}
         <div className="card">
           <h3>Create Project</h3>
           <form onSubmit={createProject}>
@@ -298,15 +300,6 @@ export default function CombineReceiptsPage() {
               type="date"
               value={travelStart}
               onChange={(e) => setTravelStart(e.target.value)}
-              required
-            />
-
-            <label>Travel End Date</label>
-            <input
-              className="input"
-              type="date"
-              value={travelEnd}
-              onChange={(e) => setTravelEnd(e.target.value)}
               required
             />
 
@@ -341,6 +334,7 @@ export default function CombineReceiptsPage() {
           </button>
         </div>
 
+        {/* RIGHT: Project Detail */}
         <div className="card">
           <h3>Project</h3>
 
@@ -349,13 +343,40 @@ export default function CombineReceiptsPage() {
           ) : (
             <>
               <div style={{ marginBottom: 10 }}>
-                <div><strong>Service Report:</strong> {selected.serviceReportNumber}</div>
-                <div><strong>Customer:</strong> {selected.customerName}</div>
-                <div><strong>Travel Dates:</strong> {selected.travelStart} → {selected.travelEnd}</div>
-                <div><strong>Status:</strong> {selected.status}</div>
-                <div><strong>Created:</strong> {fmtDate(selected.createdAt)}</div>
-                {selected.closedAt ? <div><strong>Closed:</strong> {fmtDate(selected.closedAt)}</div> : null}
+                <div>
+                  <strong>Service Report:</strong> {selected.serviceReportNumber}
+                </div>
+                <div>
+                  <strong>Customer:</strong> {selected.customerName}
+                </div>
+                <div>
+                  <strong>Travel Dates:</strong> {selected.travelStart}{" "}
+                  {selected.travelEnd ? `to ${selected.travelEnd}` : "(end date picked at close)"}
+                </div>
+                <div>
+                  <strong>Status:</strong> {selected.status}
+                </div>
+                <div>
+                  <strong>Created:</strong> {fmtDate(selected.createdAt)}
+                </div>
+                {selected.closedAt ? (
+                  <div>
+                    <strong>Closed:</strong> {fmtDate(selected.closedAt)}
+                  </div>
+                ) : null}
               </div>
+
+              {selected.status === "open" ? (
+                <div style={{ marginBottom: 10 }}>
+                  <label>Travel End Date (selected when closing)</label>
+                  <input
+                    className="input"
+                    type="date"
+                    value={travelEndClose}
+                    onChange={(e) => setTravelEndClose(e.target.value)}
+                  />
+                </div>
+              ) : null}
 
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                 <button className="button" onClick={downloadPdf} disabled={selected.status !== "closed"}>
@@ -388,13 +409,8 @@ export default function CombineReceiptsPage() {
                   rows={3}
                 />
 
-                <label>File (any image — auto-converts to JPG/PNG for PDF)</label>
-                <input
-                  className="input"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                />
+                <label>File (most images OK — HEIC auto-converts)</label>
+                <input className="input" type="file" accept="image/*" onChange={(e) => setUploadFile(e.target.files?.[0] || null)} />
 
                 <button className="button" type="submit" disabled={selected.status !== "open"} style={{ width: "100%" }}>
                   Upload
@@ -403,7 +419,7 @@ export default function CombineReceiptsPage() {
 
               <hr style={{ margin: "16px 0" }} />
 
-              <h3>Photos ({selected.photos?.length || 0})</h3>
+              <h3>Receipts ({selected.photos?.length || 0})</h3>
               {selected.photos?.length ? (
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -426,7 +442,7 @@ export default function CombineReceiptsPage() {
                   </table>
                 </div>
               ) : (
-                <p>No photos yet.</p>
+                <p>No receipts yet.</p>
               )}
             </>
           )}

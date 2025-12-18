@@ -4,73 +4,99 @@ import { getJson, putJson, getBytes, putBytes } from "../../../../_cf";
 
 export const runtime = "edge";
 
+const EASTERN_TZ = "America/Detroit";
+
 function nowIso() {
   return new Date().toISOString();
+}
+
+function formatEasternDateTime(d = new Date()) {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: EASTERN_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZoneName: "short",
+  }).format(d);
 }
 
 function safeName(s) {
   return String(s || "receipts").replace(/[^\w\-]+/g, "_").slice(0, 80);
 }
 
-/**
- * Prefer magic-byte sniffing over extension/contentType
- * because people upload weirdly named files all the time.
- */
-function sniffImageKind(bytes, fallbackContentType, key) {
-  const ct = String(fallbackContentType || "").toLowerCase();
+function sniffImageKind(bytes) {
+  if (!bytes || bytes.length < 12) return null;
 
-  // Magic bytes (best)
-  if (bytes?.length >= 12) {
-    // PNG: 89 50 4E 47 0D 0A 1A 0A
-    if (
-      bytes[0] === 0x89 &&
-      bytes[1] === 0x50 &&
-      bytes[2] === 0x4e &&
-      bytes[3] === 0x47 &&
-      bytes[4] === 0x0d &&
-      bytes[5] === 0x0a &&
-      bytes[6] === 0x1a &&
-      bytes[7] === 0x0a
-    ) {
-      return "png";
-    }
-
-    // JPEG: FF D8 FF
-    if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
-      return "jpg";
-    }
+  // PNG signature: 89 50 4E 47 0D 0A 1A 0A
+  if (
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47 &&
+    bytes[4] === 0x0d &&
+    bytes[5] === 0x0a &&
+    bytes[6] === 0x1a &&
+    bytes[7] === 0x0a
+  ) {
+    return "png";
   }
 
-  // Content-Type (okay fallback)
-  if (ct.includes("png")) return "png";
-  if (ct.includes("jpeg") || ct.includes("jpg")) return "jpg";
-
-  // Extension (last resort)
-  const k = String(key || "").toLowerCase();
-  if (k.endsWith(".png")) return "png";
-  if (k.endsWith(".jpg") || k.endsWith(".jpeg")) return "jpg";
+  // JPEG starts with FF D8 FF
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return "jpg";
+  }
 
   return null;
 }
 
-export async function POST(_req, { params }) {
+function wrapText(text, maxChars) {
+  const words = String(text || "").split(/\s+/).filter(Boolean);
+  const lines = [];
+  let line = "";
+
+  for (const w of words) {
+    if (!line) {
+      line = w;
+      continue;
+    }
+    if ((line + " " + w).length <= maxChars) {
+      line += " " + w;
+    } else {
+      lines.push(line);
+      line = w;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+export async function POST(req, { params }) {
   try {
     const id = params?.id;
     if (!id) return Response.json({ error: "Missing id" }, { status: 400 });
 
+    // Travel End is chosen at close time
+    const body = await req.json().catch(() => ({}));
+    const travelEnd = String(body?.travelEnd || "").trim();
+    if (!travelEnd) {
+      return Response.json({ error: "Travel End date is required to close." }, { status: 400 });
+    }
+
     const metaKey = `travel/projects/${id}/meta.json`;
     const meta = await getJson(metaKey);
-
     if (!meta) return Response.json({ error: "Project not found" }, { status: 404 });
     if (meta.status !== "open") return Response.json({ error: "Already closed" }, { status: 400 });
 
     const photos = Array.isArray(meta.photos) ? meta.photos : [];
     if (!photos.length) {
-      return Response.json(
-        { error: "Upload at least one photo before closing." },
-        { status: 400 }
-      );
+      return Response.json({ error: "Upload at least one receipt before closing." }, { status: 400 });
     }
+
+    // finalize travel end on meta BEFORE pdf
+    meta.travelEnd = travelEnd;
 
     const pdf = await PDFDocument.create();
     const font = await pdf.embedFont(StandardFonts.Helvetica);
@@ -91,40 +117,66 @@ export async function POST(_req, { params }) {
 
       line("Service Report:", meta.serviceReportNumber);
       line("Customer:", meta.customerName);
-
-      // IMPORTANT: no Unicode arrow (Helvetica WinAnsi can’t encode →)
-      line("Travel Dates:", `${meta.travelStart} -> ${meta.travelEnd}`);
-
-      line("Photos:", String(photos.length));
-      line("Generated:", nowIso());
+      line("Travel Dates:", `${meta.travelStart} to ${meta.travelEnd}`);
+      line("Receipts:", String(photos.length));
+      line("Generated:", formatEasternDateTime(new Date()));
     }
 
-    // One receipt per page
+    // Each receipt page: Title/Desc at top + image below
     for (const p of photos) {
       const got = await getBytes(p.key);
       if (!got?.bytes) continue;
 
-      const bytes = got.bytes;
-      const kind = sniffImageKind(bytes, got.contentType, p.key);
+      const bytes = got.bytes instanceof Uint8Array ? got.bytes : new Uint8Array(got.bytes);
+      const kind = sniffImageKind(bytes);
 
       if (!kind) {
-        return Response.json(
-          {
-            error:
-              `Unsupported image format for PDF embedding. ` +
-              `Please upload JPG/PNG (HEIC is OK if it converts on upload). ` +
-              `Offending file key: ${p.key}`
-          },
-          { status: 400 }
-        );
+        // Skip unknown image types safely
+        continue;
       }
 
       const img = kind === "png" ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes);
+
       const page = pdf.addPage([612, 792]);
 
-      const margin = 24;
+      const margin = 36;
+      const headerTop = 792 - margin;
+      let y = headerTop;
+
+      const title = String(p.title || "").trim();
+      const desc = String(p.description || "").trim();
+
+      // Title
+      if (title) {
+        const titleLines = wrapText(title, 60);
+        for (const line of titleLines) {
+          page.drawText(line, { x: margin, y, size: 16, font });
+          y -= 20;
+        }
+        y -= 4;
+      }
+
+      // Description
+      if (desc) {
+        const descLines = wrapText(desc, 90);
+        for (const line of descLines) {
+          page.drawText(line, { x: margin, y, size: 11, font });
+          y -= 14;
+        }
+        y -= 6;
+      }
+
+      // Optional: uploaded date
+      if (p.uploadedAt) {
+        page.drawText(`Uploaded: ${String(p.uploadedAt)}`, { x: margin, y, size: 9, font });
+        y -= 14;
+      }
+
+      // Image area below header
+      const imageTopY = y - 8;
+      const imageBottomY = margin;
       const maxW = 612 - margin * 2;
-      const maxH = 792 - margin * 2;
+      const maxH = imageTopY - imageBottomY;
 
       const { width, height } = img.scale(1);
       const scale = Math.min(maxW / width, maxH / height);
@@ -132,9 +184,9 @@ export async function POST(_req, { params }) {
       const drawW = width * scale;
       const drawH = height * scale;
       const x = (612 - drawW) / 2;
-      const y = (792 - drawH) / 2;
+      const imgY = imageBottomY + (maxH - drawH) / 2;
 
-      page.drawImage(img, { x, y, width: drawW, height: drawH });
+      page.drawImage(img, { x, y: imgY, width: drawW, height: drawH });
     }
 
     const pdfBytes = await pdf.save();
@@ -144,6 +196,7 @@ export async function POST(_req, { params }) {
 
     meta.status = "closed";
     meta.closedAt = nowIso();
+    meta.updatedAt = nowIso();
     meta.pdfKey = pdfKey;
 
     await putJson(metaKey, meta);
@@ -153,10 +206,6 @@ export async function POST(_req, { params }) {
       downloadUrl: `/api/travel/projects/${encodeURIComponent(id)}/pdf`,
     });
   } catch (err) {
-    // This prevents “Unexpected token 'I'…” by ALWAYS returning JSON
-    return Response.json(
-      { error: err?.message || String(err) },
-      { status: 500 }
-    );
+    return Response.json({ error: err?.message || String(err) }, { status: 500 });
   }
 }

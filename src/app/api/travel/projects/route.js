@@ -1,4 +1,5 @@
-import { listKeys, getJson, putJson } from "../../_cf";
+// src/app/api/travel/projects/route.js
+import { getJson, putJson, listKeys } from "../../_cf";
 
 export const runtime = "edge";
 
@@ -6,8 +7,12 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function newId() {
-  // works in edge + node
+function safeName(s) {
+  return String(s || "").trim();
+}
+
+function makeId() {
+  // Edge-safe UUID
   return crypto.randomUUID();
 }
 
@@ -17,8 +22,8 @@ export async function GET() {
 
   const projects = [];
   for (const k of metaKeys) {
-    const meta = await getJson(k);
-    if (meta) projects.push(meta);
+    const m = await getJson(k);
+    if (m) projects.push(m);
   }
 
   // newest first
@@ -31,30 +36,33 @@ export async function POST(request) {
   const body = await request.json().catch(() => null);
   if (!body) return Response.json({ error: "Invalid JSON" }, { status: 400 });
 
-  const serviceReportNumber = String(body.serviceReportNumber || "").trim();
-  const customerName = String(body.customerName || "").trim();
-  const travelStart = String(body.travelStart || "").trim();
-  const travelEnd = String(body.travelEnd || "").trim();
+  const serviceReportNumber = safeName(body.serviceReportNumber);
+  const customerName = safeName(body.customerName);
+  const travelStart = safeName(body.travelStart);
 
-  if (!serviceReportNumber || !customerName || !travelStart || !travelEnd) {
-    return Response.json({ error: "Missing required fields" }, { status: 400 });
-  }
+  // IMPORTANT: travelEnd is NOT chosen here anymore
+  if (!serviceReportNumber) return Response.json({ error: "Service Report # is required" }, { status: 400 });
+  if (!customerName) return Response.json({ error: "Customer Name is required" }, { status: 400 });
+  if (!travelStart) return Response.json({ error: "Travel Start is required" }, { status: 400 });
 
-  const projectId = newId();
+  const projectId = makeId();
+  const metaKey = `travel/projects/${projectId}/meta.json`;
+
   const meta = {
     projectId,
     serviceReportNumber,
     customerName,
     travelStart,
-    travelEnd,
+    travelEnd: "", // set at close time
     status: "open",
+    photos: [],
     createdAt: nowIso(),
-    closedAt: null,
-    pdfKey: null,
-    photos: []
+    updatedAt: nowIso(),
+    closedAt: "",
+    pdfKey: "",
   };
 
-  await putJson(`travel/projects/${projectId}/meta.json`, meta);
+  await putJson(metaKey, meta);
 
   return Response.json({ ok: true, projectId });
 }
