@@ -51,7 +51,8 @@ export async function POST(_req, { params }) {
       line("Customer:", meta.customerName);
 
       // IMPORTANT: no unicode arrow here (WinAnsi limitation)
-      line("Travel Dates:", `${meta.travelStart} -> ${meta.travelEnd}`);
+      `${meta.travelStart} -> ${meta.travelEnd}`
+
 
       line("Photos:", String(photos.length));
       line("Generated:", nowIso());
