@@ -1,8 +1,6 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
-    const [locationCity, setLocationCity] = useState("");
-    const [locationState, setLocationState] = useState("");
-    const [travelStartDateTime, setTravelStartDateTime] = useState("");
+    
 
 function fmtDate(d) {
   if (!d) return "";
@@ -68,6 +66,9 @@ async function convertAnyImageToJpeg(file) {
 }
 
 export default function CombineReceiptsPage() {
+  const [locationCity, setLocationCity] = useState("");
+  const [locationState, setLocationState] = useState("");
+  const [travelStartDateTime, setTravelStartDateTime] = useState("");
   const [projects, setProjects] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [selectedId, setSelectedId] = useState("");
