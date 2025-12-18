@@ -1,6 +1,50 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
 
+
+async function convertAnyImageToJpeg(file) {
+  // If already jpeg, keep as-is
+  const isJpeg =
+    /(\.jpe?g)$/i.test(file.name || "") ||
+    (file.type || "").toLowerCase().includes("jpeg");
+
+  if (isJpeg) return file;
+
+  // If PNG, keep as-is (we support PNG too)
+  const isPng =
+    /(\.png)$/i.test(file.name || "") ||
+    (file.type || "").toLowerCase().includes("png");
+
+  if (isPng) return file;
+
+  // Otherwise: WEBP/GIF/BMP/etc -> JPEG via canvas
+  // createImageBitmap works for most common formats
+  const bmp = await createImageBitmap(file);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = bmp.width;
+  canvas.height = bmp.height;
+
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(bmp, 0, 0);
+
+  const blob = await new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error("Failed to convert image"))),
+      "image/jpeg",
+      0.92
+    );
+  });
+
+  const name = (file.name || "photo")
+    .replace(/\.[^.]+$/, "")
+    .slice(0, 80) + ".jpg";
+
+  return new File([blob], name, { type: "image/jpeg" });
+}
+
+
+
 function fmtDate(d) {
   if (!d) return "";
   try {
@@ -119,61 +163,53 @@ export default function CombineReceiptsPage() {
   }
 
   async function uploadPhoto(e) {
-    e.preventDefault();
-    if (!selectedId) return alert("Select or create a project first.");
-    if (!uploadFile) return alert("Choose a file.");
-    if (!uploadTitle.trim()) return alert("Title is required.");
+  e.preventDefault();
+  if (!selectedId) return alert("Select or create a project first.");
+  if (!uploadFile) return alert("Choose a file.");
+  if (!uploadTitle.trim()) return alert("Title is required.");
 
-    setBusy("Uploading…");
-    try {
-      let file = uploadFile;
+  setBusy("Uploading…");
+  try {
+    let file = uploadFile;
 
-      const isHeic =
-        /(\.heic|\.heif)$/i.test(file.name || "") ||
-        /image\/hei(c|f)/i.test(file.type || "");
+    // HEIC/HEIF from iPhone → convert to JPEG
+    const isHeic =
+      /(\.heic|\.heif)$/i.test(file.name || "") ||
+      /image\/hei(c|f)/i.test(file.type || "");
 
-      if (isHeic) {
-        file = await convertHeicToJpeg(file);
-      }
-
-      const ext = (file.name || "").toLowerCase();
-      const ok =
-        ext.endsWith(".jpg") ||
-        ext.endsWith(".jpeg") ||
-        ext.endsWith(".png") ||
-        file.type === "image/jpeg" ||
-        file.type === "image/png";
-
-      if (!ok) {
-        alert("For now, please upload JPG/JPEG/PNG (HEIC is OK; it auto-converts).");
-        return;
-      }
-
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("title", uploadTitle.trim());
-      fd.append("description", uploadDesc || "");
-
-      const res = await fetch(`/api/travel/projects/${encodeURIComponent(selectedId)}/photos`, {
-        method: "POST",
-        body: fd
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Upload failed");
-
-      setUploadTitle("");
-      setUploadDesc("");
-      setUploadFile(null);
-
-      await loadProject(selectedId);
-      await refreshProjects();
-    } catch (err) {
-      alert(err?.message || String(err));
-    } finally {
-      setBusy("");
+    if (isHeic) {
+      file = await convertHeicToJpeg(file);
+    } else {
+      // Any other image type → convert to JPEG if not JPG/PNG
+      file = await convertAnyImageToJpeg(file);
     }
+
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("title", uploadTitle.trim());
+    fd.append("description", uploadDesc || "");
+
+    const res = await fetch(`/api/travel/projects/${encodeURIComponent(selectedId)}/photos`, {
+      method: "POST",
+      body: fd
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error || "Upload failed");
+
+    setUploadTitle("");
+    setUploadDesc("");
+    setUploadFile(null);
+
+    await loadProject(selectedId);
+    await refreshProjects();
+  } catch (err) {
+    alert(err?.message || String(err));
+  } finally {
+    setBusy("");
   }
+}
+
 
   async function readJsonSafe(res) {
   const text = await res.text();

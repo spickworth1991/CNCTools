@@ -1,6 +1,33 @@
 import { PDFDocument, StandardFonts } from "pdf-lib";
 import { getJson, putJson, getBytes, putBytes } from "../../../../_cf";
 
+function detectImageKind(bytes, contentType, key) {
+  const ct = (contentType || "").toLowerCase();
+  const k = (key || "").toLowerCase();
+
+  // Prefer content-type
+  if (ct.includes("png")) return "png";
+  if (ct.includes("jpeg") || ct.includes("jpg")) return "jpg";
+
+  // Magic bytes fallback
+  // PNG: 89 50 4E 47 0D 0A 1A 0A
+  if (
+    bytes?.length >= 8 &&
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47
+  ) return "png";
+
+  // JPEG: FF D8
+  if (bytes?.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xd8) return "jpg";
+
+  // Extension fallback (last resort)
+  if (k.endsWith(".png")) return "png";
+  return "jpg";
+}
+
+
 export const runtime = "edge";
 
 function nowIso() {
@@ -60,31 +87,30 @@ export async function POST(_req, { params }) {
 
     // One receipt per page
     for (const p of photos) {
-      const got = await getBytes(p.key);
-      if (!got?.bytes) continue;
+        const got = await getBytes(p.key);
+        if (!got?.bytes) continue;
 
-      const bytes = got.bytes;
-      const isPng =
-        (p.key || "").toLowerCase().endsWith(".png") ||
-        (got.contentType || "").includes("png");
+        const bytes = got.bytes;
+        const kind = detectImageKind(bytes, got.contentType, p.key);
 
-      const img = isPng ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes);
-      const page = pdf.addPage([612, 792]);
+        const img = kind === "png" ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes);
+        const page = pdf.addPage([612, 792]);
 
-      const margin = 24;
-      const maxW = 612 - margin * 2;
-      const maxH = 792 - margin * 2;
+        const margin = 24;
+        const maxW = 612 - margin * 2;
+        const maxH = 792 - margin * 2;
 
-      const { width, height } = img.scale(1);
-      const scale = Math.min(maxW / width, maxH / height);
+        const { width, height } = img.scale(1);
+        const scale = Math.min(maxW / width, maxH / height);
 
-      const drawW = width * scale;
-      const drawH = height * scale;
-      const x = (612 - drawW) / 2;
-      const y = (792 - drawH) / 2;
+        const drawW = width * scale;
+        const drawH = height * scale;
+        const x = (612 - drawW) / 2;
+        const y = (792 - drawH) / 2;
 
-      page.drawImage(img, { x, y, width: drawW, height: drawH });
-    }
+        page.drawImage(img, { x, y, width: drawW, height: drawH });
+        }
+
 
     const pdfBytes = await pdf.save();
     const pdfKey = `travel/projects/${id}/pdf/${safeName(meta.serviceReportNumber)}.pdf`;
