@@ -1,5 +1,5 @@
 // src/app/api/travel/projects/[id]/route.js
-import { getJson, deleteKey, deletePrefix } from "../../../../_cf";
+import { getJson, deleteKey, deletePrefix } from "../../../_cf";
 
 export const runtime = "edge";
 
