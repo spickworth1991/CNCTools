@@ -137,6 +137,8 @@ export default function CombineReceiptsPage() {
         body: JSON.stringify({
           serviceReportNumber: serviceReportNumber.trim(),
           customerName: customerName.trim(),
+          locationCity: locationCity.trim(),
+          locationState: locationState.trim(),
           travelStart,
         }),
       });
@@ -162,6 +164,10 @@ export default function CombineReceiptsPage() {
     setBusy("Uploading…");
     try {
       let file = uploadFile;
+      
+      const [locationCity, setLocationCity] = useState("");
+    const [locationState, setLocationState] = useState("");
+    const [travelStartDateTime, setTravelStartDateTime] = useState("");
 
       const isHeic =
         /(\.heic|\.heif)$/i.test(file.name || "") ||
@@ -297,6 +303,22 @@ export default function CombineReceiptsPage() {
               required
             />
 
+            <label>Location City</label>
+            <input className="input" value={locationCity} onChange={(e) => setLocationCity(e.target.value)} required />
+
+            <label>Location State</label>
+            <input className="input" value={locationState} onChange={(e) => setLocationState(e.target.value)} required />
+
+            <label>Travel Start (date + time)</label>
+            <input
+            className="input"
+            type="datetime-local"
+            value={travelStartDateTime}
+            onChange={(e) => setTravelStartDateTime(e.target.value)}
+            required
+            />
+
+
             <label>Travel Start Date</label>
             <input
               className="input"
@@ -430,7 +452,7 @@ export default function CombineReceiptsPage() {
                   <table>
                     <thead>
                       <tr>
-                        <th>Preview</th>
+                        <th style={{ textAlign: "left", padding: 6, borderBottom: "1px solid #333" }}>Preview</th>
                         <th>Title</th>
                         <th>Description</th>
                         <th>Filename</th>
@@ -440,9 +462,23 @@ export default function CombineReceiptsPage() {
                     <tbody>
                       {selected.photos.map((ph) => (
                         <tr key={ph.photoId}>
-                          <td>
-                            <img className="thumb" src={`/api/r2/${encodeURIComponent(ph.key)}`} alt="" />
-                          </td>
+                          <td style={{ padding: 6, borderBottom: "1px solid #222", width: 84 }}>
+                            <img
+                                src={`/api/travel/projects/${encodeURIComponent(selectedId)}/photos/${ph.photoId}`}
+                                alt={ph.title || "Receipt"}
+                                style={{
+                                width: 72,
+                                height: 72,
+                                objectFit: "cover",
+                                borderRadius: 8,
+                                display: "block",
+                                background: "#111",
+                                border: "1px solid rgba(255,255,255,0.12)",
+                                }}
+                                loading="lazy"
+                            />
+                            </td>
+
                           <td>{ph.title}</td>
                           <td className="small">{ph.description || ""}</td>
                           <td className="small">{ph.originalName || "(unknown)"}</td>

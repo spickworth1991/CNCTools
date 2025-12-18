@@ -1,3 +1,4 @@
+// src/app/api/travel/projects/[id]/photos/route.js
 import { getJson, putJson, putBytes } from "../../../../_cf";
 
 export const runtime = "edge";
@@ -51,6 +52,21 @@ function isHeicLike(file) {
   );
 }
 
+function parseMoneyToCents(s) {
+  const raw = String(s ?? "").trim();
+  if (!raw) return null;
+  const cleaned = raw.replace(/[^0-9.]/g, "");
+  if (!cleaned) return null;
+  const n = Number(cleaned);
+  if (!Number.isFinite(n)) return null;
+  return Math.round(n * 100);
+}
+
+function parseBool(v) {
+  const s = String(v ?? "").toLowerCase().trim();
+  return s === "true" || s === "1" || s === "yes" || s === "on";
+}
+
 export async function POST(req, { params }) {
   try {
     const id = params?.id;
@@ -66,14 +82,25 @@ export async function POST(req, { params }) {
     const title = String(fd.get("title") || "").trim();
     const description = String(fd.get("description") || "").trim();
 
+    // NEW: amount + companyCharged
+    const amountCents = parseMoneyToCents(fd.get("amount"));
+    const companyCharged = parseBool(fd.get("companyCharged"));
+
     if (!file || typeof file.arrayBuffer !== "function") {
       return Response.json({ error: "Missing file" }, { status: 400 });
     }
     if (!title) return Response.json({ error: "Title is required" }, { status: 400 });
 
+    if (amountCents == null) {
+      return Response.json({ error: "Amount is required (e.g. 12.34)" }, { status: 400 });
+    }
+
     if (isHeicLike(file)) {
       return Response.json(
-        { error: "HEIC/HEIF must be converted in the browser before upload." },
+        {
+          error:
+            "HEIC/HEIF must be converted in the browser before upload. On iPhone, choose 'Most Compatible' or keep the auto-convert enabled in the uploader.",
+        },
         { status: 400 }
       );
     }
@@ -91,12 +118,12 @@ export async function POST(req, { params }) {
       contentType = "image/jpeg";
     } else if (isWebp(bytes)) {
       return Response.json(
-        { error: "WEBP isn’t supported yet for PDF generation. Please upload as JPG/PNG." },
+        { error: "WEBP isn’t supported yet for PDF generation. Please re-upload as JPG/PNG." },
         { status: 400 }
       );
     } else {
       return Response.json(
-        { error: "Unsupported image format. Please upload JPG/PNG (HEIC ok only if auto-converted before upload)." },
+        { error: "Unsupported image format. Please upload a normal phone photo as JPG/PNG." },
         { status: 400 }
       );
     }
@@ -115,8 +142,10 @@ export async function POST(req, { params }) {
       uploadedAt: nowIso(),
       contentType,
       ext,
-      originalName: String(file.name || ""),
-      sizeBytes: bytes.length,
+
+      // NEW
+      amountCents,
+      companyCharged,
     });
 
     meta.photos = photos;
