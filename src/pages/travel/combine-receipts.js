@@ -189,6 +189,23 @@ export default function CombineReceiptsPage() {
         method: "POST",
         body: fd,
       });
+      // WEBP → JPEG (browser can decode WEBP into canvas)
+      const isWebp =
+        /(\.webp)$/i.test(file.name || "") || /image\/webp/i.test(file.type || "");
+
+      if (isWebp) {
+        const bmp = await createImageBitmap(file);
+        const canvas = document.createElement("canvas");
+        canvas.width = bmp.width;
+        canvas.height = bmp.height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(bmp, 0, 0);
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
+        const name = (file.name || "photo").replace(/\.webp$/i, "") + ".jpg";
+        file = new File([blob], name, { type: "image/jpeg" });
+      }
+
+
 
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Upload failed");
