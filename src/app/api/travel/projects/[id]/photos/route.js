@@ -1,4 +1,3 @@
-// src/app/api/travel/projects/[id]/photos/route.js
 import { getJson, putJson, putBytes } from "../../../../_cf";
 
 export const runtime = "edge";
@@ -8,7 +7,6 @@ function nowIso() {
 }
 
 function isPng(bytes) {
-  // 89 50 4E 47 0D 0A 1A 0A
   return (
     bytes?.length >= 8 &&
     bytes[0] === 0x89 &&
@@ -23,22 +21,20 @@ function isPng(bytes) {
 }
 
 function isJpeg(bytes) {
-  // FF D8 FF
   return bytes?.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
 }
 
 function isWebp(bytes) {
-  // "RIFF" .... "WEBP"
   return (
     bytes?.length >= 12 &&
-    bytes[0] === 0x52 && // R
-    bytes[1] === 0x49 && // I
-    bytes[2] === 0x46 && // F
-    bytes[3] === 0x46 && // F
-    bytes[8] === 0x57 && // W
-    bytes[9] === 0x45 && // E
-    bytes[10] === 0x42 && // B
-    bytes[11] === 0x50    // P
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
   );
 }
 
@@ -75,20 +71,15 @@ export async function POST(req, { params }) {
     }
     if (!title) return Response.json({ error: "Title is required" }, { status: 400 });
 
-    // If HEIC reaches the server, it means client conversion didn't happen.
     if (isHeicLike(file)) {
       return Response.json(
-        {
-          error:
-            "HEIC/HEIF must be converted in the browser before upload. On iPhone, choose 'Most Compatible' or keep the auto-convert enabled in the uploader.",
-        },
+        { error: "HEIC/HEIF must be converted in the browser before upload." },
         { status: 400 }
       );
     }
 
     const bytes = new Uint8Array(await file.arrayBuffer());
 
-    // Detect actual format from bytes (most reliable)
     let ext = "";
     let contentType = "";
 
@@ -99,45 +90,34 @@ export async function POST(req, { params }) {
       ext = "jpg";
       contentType = "image/jpeg";
     } else if (isWebp(bytes)) {
-      // We *could* store it, but pdf-lib can't embed WEBP.
-      // Better: force client-side conversion so "Close + Generate PDF" always works.
       return Response.json(
-        {
-          error:
-            "WEBP isn’t supported yet for PDF generation. Please re-upload as JPG/PNG (or we can add client-side auto-conversion).",
-        },
+        { error: "WEBP isn’t supported yet for PDF generation. Please upload as JPG/PNG." },
         { status: 400 }
       );
     } else {
       return Response.json(
-        {
-          error:
-            "Unsupported image format. Please upload a normal phone photo as JPG/PNG (HEIC is OK only if it auto-converts before upload).",
-        },
+        { error: "Unsupported image format. Please upload JPG/PNG (HEIC ok only if auto-converted before upload)." },
         { status: 400 }
       );
     }
 
-    const photoId = crypto.randomUUID(); // Edge-safe
+    const photoId = crypto.randomUUID();
     const key = `travel/projects/${id}/photos/${photoId}.${ext}`;
 
     await putBytes(key, bytes, contentType);
 
     const photos = Array.isArray(meta.photos) ? meta.photos : [];
     photos.push({
-        photoId,
-        key,
-        title,
-        description,
-        uploadedAt: nowIso(),
-        contentType,
-        ext,
-
-        // ✅ add these
-        originalName: String(file?.name || ""),
-        size: typeof file?.size === "number" ? file.size : null,
-        });
-
+      photoId,
+      key,
+      title,
+      description,
+      uploadedAt: nowIso(),
+      contentType,
+      ext,
+      originalName: String(file.name || ""),
+      sizeBytes: bytes.length,
+    });
 
     meta.photos = photos;
     meta.updatedAt = nowIso();

@@ -1,3 +1,4 @@
+// src/_cf.js  (or wherever your _cf currently lives)
 import { getRequestContext } from "@cloudflare/next-on-pages";
 
 export function getEnv() {
@@ -78,26 +79,23 @@ export async function listKeys(prefix) {
     }
     return out;
   }
-  // local dev: only list what we have
   const m = mem();
   const keys = new Set([...m.meta.keys(), ...m.blob.keys()]);
   return [...keys].filter((k) => k.startsWith(prefix));
 }
 
+export async function deleteKey(key) {
+  const env = getEnv();
+  if (env?.CNCTOOLS_BUCKET) {
+    await env.CNCTOOLS_BUCKET.delete(key);
+    return;
+  }
+  mem().meta.delete(key);
+  mem().blob.delete(key);
+}
 
 export async function deletePrefix(prefix) {
   const keys = await listKeys(prefix);
-  if (!keys.length) return;
-
-  const env = getEnv();
-  if (env?.CNCTOOLS_BUCKET) {
-    await env.CNCTOOLS_BUCKET.delete(keys);
-    return;
-  }
-
-  const m = mem();
-  for (const k of keys) {
-    m.meta.delete(k);
-    m.blob.delete(k);
-  }
+  for (const k of keys) await deleteKey(k);
+  return keys.length;
 }

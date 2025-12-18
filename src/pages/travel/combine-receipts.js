@@ -1,20 +1,6 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
 
-let _heic2any = null;
-
-async function getHeic2any() {
-  if (typeof window === "undefined") {
-    throw new Error("HEIC conversion can only run in the browser.");
-  }
-  if (_heic2any) return _heic2any;
-
-  const mod = await import("heic2any");
-  _heic2any = mod.default || mod;
-  return _heic2any;
-}
-
-
 function fmtDate(d) {
   if (!d) return "";
   try {
@@ -30,10 +16,6 @@ function todayYYYYMMDD() {
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
-}
-
-async function fileToArrayBuffer(file) {
-  return await file.arrayBuffer();
 }
 
 async function convertHeicToJpeg(file) {
@@ -52,10 +34,7 @@ async function convertHeicToJpeg(file) {
   return new File([blob], name, { type: "image/jpeg" });
 }
 
-
-
 async function convertAnyImageToJpeg(file) {
-  // For things like WEBP, GIF, BMP, etc. (anything the browser can decode)
   const blobUrl = URL.createObjectURL(file);
   try {
     const img = await new Promise((resolve, reject) => {
@@ -124,10 +103,9 @@ export default function CombineReceiptsPage() {
     }
     const res = await fetch(`/api/travel/projects/${encodeURIComponent(id)}`, { method: "GET" });
     const data = await res.json();
-    setSelected(data.project || null);
-
-    // Keep the close-date input synced
     const proj = data.project || null;
+    setSelected(proj);
+
     if (proj?.travelEnd) setTravelEndClose(proj.travelEnd);
     else setTravelEndClose(todayYYYYMMDD());
   }
@@ -185,7 +163,6 @@ export default function CombineReceiptsPage() {
     try {
       let file = uploadFile;
 
-      // HEIC/HEIF → convert to JPEG
       const isHeic =
         /(\.heic|\.heif)$/i.test(file.name || "") ||
         /image\/hei(c|f)/i.test(file.type || "");
@@ -193,7 +170,6 @@ export default function CombineReceiptsPage() {
         file = await convertHeicToJpeg(file);
       }
 
-      // If it’s not JPG/PNG, try converting to JPG via canvas
       const lowerName = (file.name || "").toLowerCase();
       const isJpgPng =
         lowerName.endsWith(".jpg") ||
@@ -204,20 +180,6 @@ export default function CombineReceiptsPage() {
 
       if (!isJpgPng) {
         file = await convertAnyImageToJpeg(file);
-      }
-
-      // Final allowlist for server-side PDF embedding
-      const ext = (file.name || "").toLowerCase();
-      const ok =
-        ext.endsWith(".jpg") ||
-        ext.endsWith(".jpeg") ||
-        ext.endsWith(".png") ||
-        file.type === "image/jpeg" ||
-        file.type === "image/png";
-
-      if (!ok) {
-        alert("Please upload an image file your browser can convert (or use JPG/PNG/HEIC).");
-        return;
       }
 
       const fd = new FormData();
@@ -277,11 +239,33 @@ export default function CombineReceiptsPage() {
     window.open(`/api/travel/projects/${encodeURIComponent(selectedId)}/pdf`, "_blank");
   }
 
+  async function deleteClosedProject() {
+    if (!selectedId || !selected) return;
+    if (selected.status !== "closed") return alert("Only CLOSED projects can be deleted.");
+    const ok = confirm(`DELETE this closed project?\n\n${selected.serviceReportNumber} — ${selected.customerName}\n\nThis cannot be undone.`);
+    if (!ok) return;
+
+    setBusy("Deleting project…");
+    try {
+      const res = await fetch(`/api/travel/projects/${encodeURIComponent(selectedId)}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Delete failed");
+
+      setSelectedId("");
+      setSelected(null);
+      await refreshProjects();
+    } catch (err) {
+      alert(err?.message || String(err));
+    } finally {
+      setBusy("");
+    }
+  }
+
   return (
-    <div>
-      <div>
+    <div className="container">
+      <div style={{ marginBottom: 10 }}>
         <h1>Combine Receipts</h1>
-        <p>Create a project, upload receipt photos, then close it to generate a single PDF.</p>
+        <p className="small">Create a project, upload receipt photos, then close it to generate a single PDF.</p>
       </div>
 
       {busy ? (
@@ -291,11 +275,11 @@ export default function CombineReceiptsPage() {
       ) : null}
 
       <div className="grid" style={{ alignItems: "start" }}>
-        {/* LEFT: Create + Select */}
+        {/* LEFT */}
         <div className="card">
           <h3>Create Project</h3>
           <form onSubmit={createProject}>
-            <label>Service Report # (used as PDF filename)</label>
+            <label>Service Report # (PDF filename)</label>
             <input
               className="input"
               value={serviceReportNumber}
@@ -322,12 +306,12 @@ export default function CombineReceiptsPage() {
               required
             />
 
-            <button className="button" type="submit" style={{ width: "100%" }}>
+            <button className="button" type="submit">
               Create Project
             </button>
           </form>
 
-          <hr style={{ margin: "16px 0" }} />
+          <div className="hr" />
 
           <h3>Select Project</h3>
           <select className="input" value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
@@ -348,41 +332,29 @@ export default function CombineReceiptsPage() {
             ))}
           </select>
 
-          <button className="button" style={{ width: "100%", marginTop: 10 }} onClick={() => refreshProjects()}>
+          <button className="button secondary" style={{ marginTop: 10 }} onClick={() => refreshProjects()}>
             {loadingProjects ? "Refreshing…" : "Refresh List"}
           </button>
         </div>
 
-        {/* RIGHT: Project Detail */}
+        {/* RIGHT */}
         <div className="card">
           <h3>Project</h3>
 
           {!selected ? (
-            <p>Select a project to begin.</p>
+            <p className="small">Select a project to begin.</p>
           ) : (
             <>
               <div style={{ marginBottom: 10 }}>
-                <div>
-                  <strong>Service Report:</strong> {selected.serviceReportNumber}
-                </div>
-                <div>
-                  <strong>Customer:</strong> {selected.customerName}
-                </div>
+                <div><strong>Service Report:</strong> {selected.serviceReportNumber}</div>
+                <div><strong>Customer:</strong> {selected.customerName}</div>
                 <div>
                   <strong>Travel Dates:</strong> {selected.travelStart}{" "}
                   {selected.travelEnd ? `to ${selected.travelEnd}` : "(end date picked at close)"}
                 </div>
-                <div>
-                  <strong>Status:</strong> {selected.status}
-                </div>
-                <div>
-                  <strong>Created:</strong> {fmtDate(selected.createdAt)}
-                </div>
-                {selected.closedAt ? (
-                  <div>
-                    <strong>Closed:</strong> {fmtDate(selected.closedAt)}
-                  </div>
-                ) : null}
+                <div><strong>Status:</strong> {selected.status}</div>
+                <div className="small">Created: {fmtDate(selected.createdAt)}</div>
+                {selected.closedAt ? <div className="small">Closed: {fmtDate(selected.closedAt)}</div> : null}
               </div>
 
               {selected.status === "open" ? (
@@ -397,7 +369,7 @@ export default function CombineReceiptsPage() {
                 </div>
               ) : null}
 
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <div className="row">
                 <button className="button" onClick={downloadPdf} disabled={selected.status !== "closed"}>
                   Download PDF
                 </button>
@@ -406,7 +378,15 @@ export default function CombineReceiptsPage() {
                 </button>
               </div>
 
-              <hr style={{ margin: "16px 0" }} />
+              {selected.status === "closed" ? (
+                <div style={{ marginTop: 10 }}>
+                  <button className="button danger" onClick={deleteClosedProject}>
+                    Delete Closed Project
+                  </button>
+                </div>
+              ) : null}
+
+              <div className="hr" />
 
               <h3>Add Receipt Photo</h3>
               <form onSubmit={uploadPhoto}>
@@ -428,40 +408,52 @@ export default function CombineReceiptsPage() {
                   rows={3}
                 />
 
-                <label>File (most images OK — HEIC auto-converts)</label>
-                <input className="input" type="file" accept="image/*" onChange={(e) => setUploadFile(e.target.files?.[0] || null)} />
+                <label>File (any normal phone image; HEIC auto-converts)</label>
+                <input
+                  className="input"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                />
 
-                <button className="button" type="submit" disabled={selected.status !== "open"} style={{ width: "100%" }}>
+                <button className="button" type="submit" disabled={selected.status !== "open"}>
                   Upload
                 </button>
               </form>
 
-              <hr style={{ margin: "16px 0" }} />
+              <div className="hr" />
 
               <h3>Receipts ({selected.photos?.length || 0})</h3>
+
               {selected.photos?.length ? (
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <div className="tableWrap">
+                  <table>
                     <thead>
                       <tr>
-                        <th style={{ textAlign: "left", padding: 6, borderBottom: "1px solid #333" }}>Title</th>
-                        <th style={{ textAlign: "left", padding: 6, borderBottom: "1px solid #333" }}>Description</th>
-                        <th style={{ textAlign: "left", padding: 6, borderBottom: "1px solid #333" }}>Uploaded</th>
+                        <th>Preview</th>
+                        <th>Title</th>
+                        <th>Description</th>
+                        <th>Filename</th>
+                        <th>Uploaded</th>
                       </tr>
                     </thead>
                     <tbody>
                       {selected.photos.map((ph) => (
                         <tr key={ph.photoId}>
-                          <td style={{ padding: 6, borderBottom: "1px solid #222" }}>{ph.title}</td>
-                          <td style={{ padding: 6, borderBottom: "1px solid #222" }}>{ph.description || ""}</td>
-                          <td style={{ padding: 6, borderBottom: "1px solid #222" }}>{fmtDate(ph.uploadedAt)}</td>
+                          <td>
+                            <img className="thumb" src={`/api/r2/${encodeURIComponent(ph.key)}`} alt="" />
+                          </td>
+                          <td>{ph.title}</td>
+                          <td className="small">{ph.description || ""}</td>
+                          <td className="small">{ph.originalName || "(unknown)"}</td>
+                          <td className="small">{fmtDate(ph.uploadedAt)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
               ) : (
-                <p>No receipts yet.</p>
+                <p className="small">No receipts yet.</p>
               )}
             </>
           )}
