@@ -1,4 +1,4 @@
-// src/_cf.js  (or wherever your _cf currently lives)
+// src/app/api/_cf.js
 import { getRequestContext } from "@cloudflare/next-on-pages";
 
 export function getEnv() {
@@ -14,8 +14,8 @@ export function getEnv() {
 function mem() {
   if (!globalThis.__TRAVEL_MEM__) {
     globalThis.__TRAVEL_MEM__ = {
-      meta: new Map(),  // key -> json
-      blob: new Map(),  // key -> Uint8Array
+      meta: new Map(), // key -> json
+      blob: new Map(), // key -> Uint8Array
     };
   }
   return globalThis.__TRAVEL_MEM__;
@@ -25,7 +25,7 @@ export async function putJson(key, value) {
   const env = getEnv();
   if (env?.CNCTOOLS_BUCKET) {
     await env.CNCTOOLS_BUCKET.put(key, JSON.stringify(value, null, 2), {
-      httpMetadata: { contentType: "application/json; charset=utf-8" }
+      httpMetadata: { contentType: "application/json; charset=utf-8" },
     });
     return;
   }
@@ -46,7 +46,7 @@ export async function putBytes(key, bytes, contentType) {
   const env = getEnv();
   if (env?.CNCTOOLS_BUCKET) {
     await env.CNCTOOLS_BUCKET.put(key, bytes, {
-      httpMetadata: { contentType: contentType || "application/octet-stream" }
+      httpMetadata: { contentType: contentType || "application/octet-stream" },
     });
     return;
   }
@@ -84,6 +84,7 @@ export async function listKeys(prefix) {
   return [...keys].filter((k) => k.startsWith(prefix));
 }
 
+// ✅ NEW: delete a single key
 export async function deleteKey(key) {
   const env = getEnv();
   if (env?.CNCTOOLS_BUCKET) {
@@ -94,8 +95,11 @@ export async function deleteKey(key) {
   mem().blob.delete(key);
 }
 
+// ✅ NEW: delete everything under a prefix
 export async function deletePrefix(prefix) {
   const keys = await listKeys(prefix);
-  for (const k of keys) await deleteKey(k);
+  for (const k of keys) {
+    await deleteKey(k);
+  }
   return keys.length;
 }

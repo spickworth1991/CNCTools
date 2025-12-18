@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
-    
 
 function fmtDate(d) {
   if (!d) return "";
@@ -52,10 +51,7 @@ async function convertAnyImageToJpeg(file) {
     const ctx = canvas.getContext("2d");
     ctx.drawImage(img, 0, 0);
 
-    const blob = await new Promise((resolve) =>
-      canvas.toBlob((b) => resolve(b), "image/jpeg", 0.9)
-    );
-
+    const blob = await new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/jpeg", 0.9));
     if (!blob) throw new Error("Conversion failed.");
 
     const base = (file.name || "photo").replace(/\.[^.]+$/, "");
@@ -66,9 +62,6 @@ async function convertAnyImageToJpeg(file) {
 }
 
 export default function CombineReceiptsPage() {
-  const [locationCity, setLocationCity] = useState("");
-  const [locationState, setLocationState] = useState("");
-  const [travelStartDateTime, setTravelStartDateTime] = useState("");
   const [projects, setProjects] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [selectedId, setSelectedId] = useState("");
@@ -78,7 +71,9 @@ export default function CombineReceiptsPage() {
   // Create form
   const [serviceReportNumber, setServiceReportNumber] = useState("");
   const [customerName, setCustomerName] = useState("");
-  const [travelStart, setTravelStart] = useState("");
+  const [locationCity, setLocationCity] = useState("");
+  const [locationState, setLocationState] = useState("");
+  const [travelStartDateTime, setTravelStartDateTime] = useState(""); // ✅ single input
 
   // Close form
   const [travelEndClose, setTravelEndClose] = useState(todayYYYYMMDD());
@@ -87,6 +82,8 @@ export default function CombineReceiptsPage() {
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadDesc, setUploadDesc] = useState("");
   const [uploadFile, setUploadFile] = useState(null);
+  const [uploadAmount, setUploadAmount] = useState(""); // ✅ required by server
+  const [uploadCompanyCharged, setUploadCompanyCharged] = useState(false); // ✅ required by server
 
   async function refreshProjects(autoSelectId) {
     setLoadingProjects(true);
@@ -122,14 +119,8 @@ export default function CombineReceiptsPage() {
     loadProject(selectedId);
   }, [selectedId]);
 
-  const openProjects = useMemo(
-    () => projects.filter((p) => (p.status || "open") === "open"),
-    [projects]
-  );
-  const closedProjects = useMemo(
-    () => projects.filter((p) => (p.status || "open") === "closed"),
-    [projects]
-  );
+  const openProjects = useMemo(() => projects.filter((p) => (p.status || "open") === "open"), [projects]);
+  const closedProjects = useMemo(() => projects.filter((p) => (p.status || "open") === "closed"), [projects]);
 
   async function createProject(e) {
     e.preventDefault();
@@ -143,15 +134,19 @@ export default function CombineReceiptsPage() {
           customerName: customerName.trim(),
           locationCity: locationCity.trim(),
           locationState: locationState.trim(),
-          travelStart,
+          travelStartDateTime: travelStartDateTime,
         }),
       });
+
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to create project");
       await refreshProjects(data.projectId);
+
       setServiceReportNumber("");
       setCustomerName("");
-      setTravelStart("");
+      setLocationCity("");
+      setLocationState("");
+      setTravelStartDateTime("");
     } catch (err) {
       alert(err?.message || String(err));
     } finally {
@@ -164,17 +159,14 @@ export default function CombineReceiptsPage() {
     if (!selectedId) return alert("Select or create a project first.");
     if (!uploadFile) return alert("Choose a file.");
     if (!uploadTitle.trim()) return alert("Title is required.");
+    if (!String(uploadAmount).trim()) return alert("Amount is required.");
 
     setBusy("Uploading…");
     try {
       let file = uploadFile;
 
-      const isHeic =
-        /(\.heic|\.heif)$/i.test(file.name || "") ||
-        /image\/hei(c|f)/i.test(file.type || "");
-      if (isHeic) {
-        file = await convertHeicToJpeg(file);
-      }
+      const isHeic = /(\.heic|\.heif)$/i.test(file.name || "") || /image\/hei(c|f)/i.test(file.type || "");
+      if (isHeic) file = await convertHeicToJpeg(file);
 
       const lowerName = (file.name || "").toLowerCase();
       const isJpgPng =
@@ -184,14 +176,14 @@ export default function CombineReceiptsPage() {
         file.type === "image/jpeg" ||
         file.type === "image/png";
 
-      if (!isJpgPng) {
-        file = await convertAnyImageToJpeg(file);
-      }
+      if (!isJpgPng) file = await convertAnyImageToJpeg(file);
 
       const fd = new FormData();
       fd.append("file", file);
       fd.append("title", uploadTitle.trim());
       fd.append("description", uploadDesc || "");
+      fd.append("amount", String(uploadAmount).trim());
+      fd.append("companyCharged", uploadCompanyCharged ? "true" : "false");
 
       const res = await fetch(`/api/travel/projects/${encodeURIComponent(selectedId)}/photos`, {
         method: "POST",
@@ -204,6 +196,8 @@ export default function CombineReceiptsPage() {
       setUploadTitle("");
       setUploadDesc("");
       setUploadFile(null);
+      setUploadAmount("");
+      setUploadCompanyCharged(false);
 
       await loadProject(selectedId);
       await refreshProjects();
@@ -248,7 +242,10 @@ export default function CombineReceiptsPage() {
   async function deleteClosedProject() {
     if (!selectedId || !selected) return;
     if (selected.status !== "closed") return alert("Only CLOSED projects can be deleted.");
-    const ok = confirm(`DELETE this closed project?\n\n${selected.serviceReportNumber} — ${selected.customerName}\n\nThis cannot be undone.`);
+
+    const ok = confirm(
+      `DELETE this closed project?\n\n${selected.serviceReportNumber} — ${selected.customerName}\n\nThis cannot be undone.`
+    );
     if (!ok) return;
 
     setBusy("Deleting project…");
@@ -311,20 +308,10 @@ export default function CombineReceiptsPage() {
 
             <label>Travel Start (date + time)</label>
             <input
-            className="input"
-            type="datetime-local"
-            value={travelStartDateTime}
-            onChange={(e) => setTravelStartDateTime(e.target.value)}
-            required
-            />
-
-
-            <label>Travel Start Date</label>
-            <input
               className="input"
-              type="date"
-              value={travelStart}
-              onChange={(e) => setTravelStart(e.target.value)}
+              type="datetime-local"
+              value={travelStartDateTime}
+              onChange={(e) => setTravelStartDateTime(e.target.value)}
               required
             />
 
@@ -368,13 +355,19 @@ export default function CombineReceiptsPage() {
           ) : (
             <>
               <div style={{ marginBottom: 10 }}>
-                <div><strong>Service Report:</strong> {selected.serviceReportNumber}</div>
-                <div><strong>Customer:</strong> {selected.customerName}</div>
+                <div>
+                  <strong>Service Report:</strong> {selected.serviceReportNumber}
+                </div>
+                <div>
+                  <strong>Customer:</strong> {selected.customerName}
+                </div>
                 <div>
                   <strong>Travel Dates:</strong> {selected.travelStart}{" "}
                   {selected.travelEnd ? `to ${selected.travelEnd}` : "(end date picked at close)"}
                 </div>
-                <div><strong>Status:</strong> {selected.status}</div>
+                <div>
+                  <strong>Status:</strong> {selected.status}
+                </div>
                 <div className="small">Created: {fmtDate(selected.createdAt)}</div>
                 {selected.closedAt ? <div className="small">Closed: {fmtDate(selected.closedAt)}</div> : null}
               </div>
@@ -430,6 +423,25 @@ export default function CombineReceiptsPage() {
                   rows={3}
                 />
 
+                <label>Amount (required)</label>
+                <input
+                  className="input"
+                  inputMode="decimal"
+                  placeholder="e.g. 23.45"
+                  value={uploadAmount}
+                  onChange={(e) => setUploadAmount(e.target.value)}
+                  required
+                />
+
+                <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input
+                    type="checkbox"
+                    checked={uploadCompanyCharged}
+                    onChange={(e) => setUploadCompanyCharged(e.target.checked)}
+                  />
+                  Company Charged?
+                </label>
+
                 <label>File (any normal phone image; HEIC auto-converts)</label>
                 <input
                   className="input"
@@ -464,9 +476,9 @@ export default function CombineReceiptsPage() {
                         <tr key={ph.photoId}>
                           <td style={{ padding: 6, borderBottom: "1px solid #222", width: 84 }}>
                             <img
-                                src={`/api/travel/projects/${encodeURIComponent(selectedId)}/photos/${ph.photoId}`}
-                                alt={ph.title || "Receipt"}
-                                style={{
+                              src={`/api/travel/projects/${encodeURIComponent(selectedId)}/photos/${ph.photoId}`}
+                              alt={ph.title || "Receipt"}
+                              style={{
                                 width: 72,
                                 height: 72,
                                 objectFit: "cover",
@@ -474,11 +486,10 @@ export default function CombineReceiptsPage() {
                                 display: "block",
                                 background: "#111",
                                 border: "1px solid rgba(255,255,255,0.12)",
-                                }}
-                                loading="lazy"
+                              }}
+                              loading="lazy"
                             />
-                            </td>
-
+                          </td>
                           <td>{ph.title}</td>
                           <td className="small">{ph.description || ""}</td>
                           <td className="small">{ph.originalName || "(unknown)"}</td>
