@@ -11,36 +11,6 @@ function safeName(s) {
   return String(s || "receipts").replace(/[^\w\-]+/g, "_").slice(0, 80);
 }
 
-function isPngBytes(u8) {
-  // 89 50 4E 47 0D 0A 1A 0A
-  return (
-    u8 &&
-    u8.length >= 8 &&
-    u8[0] === 0x89 &&
-    u8[1] === 0x50 &&
-    u8[2] === 0x4e &&
-    u8[3] === 0x47 &&
-    u8[4] === 0x0d &&
-    u8[5] === 0x0a &&
-    u8[6] === 0x1a &&
-    u8[7] === 0x0a
-  );
-}
-
-function isJpgBytes(u8) {
-  // FF D8 FF
-  return u8 && u8.length >= 3 && u8[0] === 0xff && u8[1] === 0xd8 && u8[2] === 0xff;
-}
-
-function toU8(bytes) {
-  if (!bytes) return null;
-  if (bytes instanceof Uint8Array) return bytes;
-  if (bytes instanceof ArrayBuffer) return new Uint8Array(bytes);
-  // Cloudflare sometimes gives Buffer-like
-  if (typeof bytes === "object" && bytes.buffer) return new Uint8Array(bytes.buffer);
-  return new Uint8Array(bytes);
-}
-
 export async function POST(_req, { params }) {
   try {
     const id = params?.id;
@@ -79,30 +49,25 @@ export async function POST(_req, { params }) {
 
       line("Service Report:", meta.serviceReportNumber);
       line("Customer:", meta.customerName);
+
+      // IMPORTANT: no unicode arrow here (WinAnsi limitation)
       line("Travel Dates:", `${meta.travelStart} -> ${meta.travelEnd}`);
+
       line("Photos:", String(photos.length));
       line("Generated:", nowIso());
     }
 
     // One receipt per page
     for (const p of photos) {
-      if (!p?.key) continue;
-
       const got = await getBytes(p.key);
-      const u8 = toU8(got?.bytes);
-      if (!u8 || !u8.length) continue;
+      if (!got?.bytes) continue;
 
-      let img;
-      if (isPngBytes(u8)) {
-        img = await pdf.embedPng(u8);
-      } else if (isJpgBytes(u8)) {
-        img = await pdf.embedJpg(u8);
-      } else {
-        // If you ever uploaded something unexpected, skip instead of crashing the whole PDF
-        console.warn("Skipping unsupported image bytes for key:", p.key, "contentType:", got?.contentType);
-        continue;
-      }
+      const bytes = got.bytes;
+      const isPng =
+        (p.key || "").toLowerCase().endsWith(".png") ||
+        (got.contentType || "").includes("png");
 
+      const img = isPng ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes);
       const page = pdf.addPage([612, 792]);
 
       const margin = 24;
@@ -121,8 +86,8 @@ export async function POST(_req, { params }) {
     }
 
     const pdfBytes = await pdf.save();
-
     const pdfKey = `travel/projects/${id}/pdf/${safeName(meta.serviceReportNumber)}.pdf`;
+
     await putBytes(pdfKey, pdfBytes, "application/pdf");
 
     meta.status = "closed";
@@ -136,7 +101,7 @@ export async function POST(_req, { params }) {
       downloadUrl: `/api/travel/projects/${encodeURIComponent(id)}/pdf`,
     });
   } catch (err) {
-    console.error("CLOSE PDF ERROR:", err);
+    // Always return JSON so the client doesn't crash on res.json()
     return Response.json(
       { error: err?.message || String(err) },
       { status: 500 }
