@@ -1,6 +1,19 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
-import heic2any from "heic2any";
+
+let _heic2any = null;
+
+async function getHeic2any() {
+  if (typeof window === "undefined") {
+    throw new Error("HEIC conversion can only run in the browser.");
+  }
+  if (_heic2any) return _heic2any;
+
+  const mod = await import("heic2any");
+  _heic2any = mod.default || mod;
+  return _heic2any;
+}
+
 
 function fmtDate(d) {
   if (!d) return "";
@@ -24,16 +37,20 @@ async function fileToArrayBuffer(file) {
 }
 
 async function convertHeicToJpeg(file) {
-  const ab = await fileToArrayBuffer(file);
+  const heic2any = await getHeic2any();
+
+  const ab = await file.arrayBuffer();
   const outBlob = await heic2any({
     blob: new Blob([ab], { type: file.type || "image/heic" }),
     toType: "image/jpeg",
     quality: 0.9,
   });
+
   const blob = Array.isArray(outBlob) ? outBlob[0] : outBlob;
   const name = (file.name || "photo").replace(/\.(heic|heif)$/i, "") + ".jpg";
   return new File([blob], name, { type: "image/jpeg" });
 }
+
 
 async function convertAnyImageToJpeg(file) {
   // For things like WEBP, GIF, BMP, etc. (anything the browser can decode)
