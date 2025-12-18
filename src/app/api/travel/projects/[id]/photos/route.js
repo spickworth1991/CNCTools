@@ -125,14 +125,19 @@ export async function POST(req, { params }) {
 
     const photos = Array.isArray(meta.photos) ? meta.photos : [];
     photos.push({
-      photoId,
-      key,
-      title,
-      description,
-      uploadedAt: nowIso(),
-      contentType,
-      ext,
-    });
+        photoId,
+        key,
+        title,
+        description,
+        uploadedAt: nowIso(),
+        contentType,
+        ext,
+
+        // ✅ add these
+        originalName: String(file?.name || ""),
+        size: typeof file?.size === "number" ? file.size : null,
+        });
+
 
     meta.photos = photos;
     meta.updatedAt = nowIso();

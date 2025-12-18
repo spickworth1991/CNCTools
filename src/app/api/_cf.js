@@ -83,3 +83,21 @@ export async function listKeys(prefix) {
   const keys = new Set([...m.meta.keys(), ...m.blob.keys()]);
   return [...keys].filter((k) => k.startsWith(prefix));
 }
+
+
+export async function deletePrefix(prefix) {
+  const keys = await listKeys(prefix);
+  if (!keys.length) return;
+
+  const env = getEnv();
+  if (env?.CNCTOOLS_BUCKET) {
+    await env.CNCTOOLS_BUCKET.delete(keys);
+    return;
+  }
+
+  const m = mem();
+  for (const k of keys) {
+    m.meta.delete(k);
+    m.blob.delete(k);
+  }
+}

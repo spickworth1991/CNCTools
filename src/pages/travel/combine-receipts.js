@@ -37,7 +37,8 @@ async function fileToArrayBuffer(file) {
 }
 
 async function convertHeicToJpeg(file) {
-  const heic2any = await getHeic2any();
+  const mod = await import("heic2any");
+  const heic2any = mod.default || mod;
 
   const ab = await file.arrayBuffer();
   const outBlob = await heic2any({
@@ -50,6 +51,7 @@ async function convertHeicToJpeg(file) {
   const name = (file.name || "photo").replace(/\.(heic|heif)$/i, "") + ".jpg";
   return new File([blob], name, { type: "image/jpeg" });
 }
+
 
 
 async function convertAnyImageToJpeg(file) {
