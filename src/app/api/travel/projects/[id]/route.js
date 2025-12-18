@@ -1,6 +1,22 @@
-import { getJson, deleteKey, deletePrefix } from "../../../_cf";
+// src/app/api/travel/projects/[id]/route.js
+import { getJson, deleteKey, deletePrefix } from "../../../../_cf";
 
 export const runtime = "edge";
+
+export async function GET(_req, { params }) {
+  try {
+    const id = params?.id;
+    if (!id) return Response.json({ error: "Missing id" }, { status: 400 });
+
+    const metaKey = `travel/projects/${id}/meta.json`;
+    const meta = await getJson(metaKey);
+    if (!meta) return Response.json({ error: "Project not found" }, { status: 404 });
+
+    return Response.json({ project: meta });
+  } catch (err) {
+    return Response.json({ error: err?.message || String(err) }, { status: 500 });
+  }
+}
 
 export async function DELETE(_req, { params }) {
   try {
@@ -15,10 +31,7 @@ export async function DELETE(_req, { params }) {
       return Response.json({ error: "Only CLOSED projects can be deleted." }, { status: 400 });
     }
 
-    // Delete all objects under this project
     await deletePrefix(`travel/projects/${id}/`);
-
-    // (metaKey is included in the prefix, but safe to ensure)
     await deleteKey(metaKey);
 
     return Response.json({ ok: true });
