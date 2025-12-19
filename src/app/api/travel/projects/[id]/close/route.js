@@ -6,6 +6,28 @@ export const runtime = "edge";
 
 const EASTERN_TZ = "America/Detroit";
 
+function easternTodayYMD() {
+  // Create a YYYY-MM-DD date string in America/Detroit
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: EASTERN_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const get = (t) => parts.find((p) => p.type === t)?.value || "";
+  const y = get("year");
+  const m = get("month");
+  const d = get("day");
+  return y && m && d ? `${y}-${m}-${d}` : "";
+}
+
+function formatMoneyFromCents(cents) {
+  if (cents === null || cents === undefined || cents === "") return "";
+  const n = typeof cents === "number" ? cents : Number(cents);
+  if (!Number.isFinite(n)) return "";
+  return `$${(n / 100).toFixed(2)}`;
+}
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -30,6 +52,7 @@ function safeName(s) {
 function sniffImageKind(bytes) {
   if (!bytes || bytes.length < 12) return null;
 
+  // PNG signature: 89 50 4E 47 0D 0A 1A 0A
   if (
     bytes[0] === 0x89 &&
     bytes[1] === 0x50 &&
@@ -39,9 +62,14 @@ function sniffImageKind(bytes) {
     bytes[5] === 0x0a &&
     bytes[6] === 0x1a &&
     bytes[7] === 0x0a
-  ) return "png";
+  ) {
+    return "png";
+  }
 
-  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "jpg";
+  // JPEG starts with FF D8 FF
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return "jpg";
+  }
 
   return null;
 }
@@ -52,9 +80,16 @@ function wrapText(text, maxChars) {
   let line = "";
 
   for (const w of words) {
-    if (!line) { line = w; continue; }
-    if ((line + " " + w).length <= maxChars) line += " " + w;
-    else { lines.push(line); line = w; }
+    if (!line) {
+      line = w;
+      continue;
+    }
+    if ((line + " " + w).length <= maxChars) {
+      line += " " + w;
+    } else {
+      lines.push(line);
+      line = w;
+    }
   }
   if (line) lines.push(line);
   return lines;
@@ -65,13 +100,13 @@ export async function POST(req, { params }) {
     const id = params?.id;
     if (!id) return Response.json({ error: "Missing id" }, { status: 400 });
 
-    // NEW: datetime-local from client, derive travelEnd YYYY-MM-DD
+    // Travel End is chosen at close time
     const body = await req.json().catch(() => ({}));
-    const travelEndDateTime = String(body?.travelEndDateTime || "").trim();
-    if (!travelEndDateTime) {
-      return Response.json({ error: "Travel End (date + time) is required to close." }, { status: 400 });
+    // Optional: if blank, default to "today" in America/Detroit.
+    const travelEnd = String(body?.travelEnd || "").trim() || easternTodayYMD();
+    if (!travelEnd) {
+      return Response.json({ error: "Could not determine Travel End date." }, { status: 400 });
     }
-    const travelEnd = travelEndDateTime.slice(0, 10);
 
     const metaKey = `travel/projects/${id}/meta.json`;
     const meta = await getJson(metaKey);
@@ -83,14 +118,13 @@ export async function POST(req, { params }) {
       return Response.json({ error: "Upload at least one receipt before closing." }, { status: 400 });
     }
 
-    // Store end datetime + end date BEFORE pdf
-    meta.travelEndDateTime = travelEndDateTime;
+    // finalize travel end on meta BEFORE pdf
     meta.travelEnd = travelEnd;
 
     const pdf = await PDFDocument.create();
     const font = await pdf.embedFont(StandardFonts.Helvetica);
 
-    // Cover page
+    // Cover / summary page
     {
       const page = pdf.addPage([612, 792]);
       const margin = 50;
@@ -111,16 +145,21 @@ export async function POST(req, { params }) {
       line("Generated:", formatEasternDateTime(new Date()));
     }
 
-    // Receipt pages (unchanged)
+    // Each receipt page: Title/Desc at top + image below
     for (const p of photos) {
       const got = await getBytes(p.key);
       if (!got?.bytes) continue;
 
       const bytes = got.bytes instanceof Uint8Array ? got.bytes : new Uint8Array(got.bytes);
       const kind = sniffImageKind(bytes);
-      if (!kind) continue;
+
+      if (!kind) {
+        // Skip unknown image types safely
+        continue;
+      }
 
       const img = kind === "png" ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes);
+
       const page = pdf.addPage([612, 792]);
 
       const margin = 36;
@@ -130,6 +169,7 @@ export async function POST(req, { params }) {
       const title = String(p.title || "").trim();
       const desc = String(p.description || "").trim();
 
+      // Title
       if (title) {
         const titleLines = wrapText(title, 60);
         for (const line of titleLines) {
@@ -139,6 +179,7 @@ export async function POST(req, { params }) {
         y -= 4;
       }
 
+      // Description
       if (desc) {
         const descLines = wrapText(desc, 90);
         for (const line of descLines) {
@@ -148,6 +189,35 @@ export async function POST(req, { params }) {
         y -= 6;
       }
 
+      // Amount + company charged (if present)
+      {
+        const amountText = formatMoneyFromCents(p.amountCents);
+        const hasCompany = typeof p.companyCharged === "boolean";
+
+        if (amountText || hasCompany) {
+          const companyText = hasCompany ? (p.companyCharged ? "Yes" : "No") : "N/A";
+          page.drawText(`Amount: ${amountText || "(n/a)"}    Company Charged: ${companyText}`, {
+            x: margin,
+            y,
+            size: 11,
+            font,
+          });
+          y -= 16;
+        }
+      }
+
+      // Optional: receipt date (preferred) or uploaded date
+      {
+        const receiptDate = String(p.receiptDate || "").trim();
+        const uploadedAt = String(p.uploadedAt || "").trim();
+        const label = receiptDate ? `Receipt Date: ${receiptDate}` : uploadedAt ? `Uploaded: ${uploadedAt}` : "";
+        if (label) {
+          page.drawText(label, { x: margin, y, size: 9, font });
+          y -= 14;
+        }
+      }
+
+      // Image area below header
       const imageTopY = y - 8;
       const imageBottomY = margin;
       const maxW = 612 - margin * 2;
