@@ -6,6 +6,14 @@ export const runtime = "edge";
 
 const EASTERN_TZ = "America/Detroit";
 
+function formatMoneyFromCents(cents) {
+  if (cents === null || cents === undefined || cents === "") return "";
+  const n = typeof cents === "number" ? cents : Number(cents);
+  if (!Number.isFinite(n)) return "";
+  return `$${(n / 100).toFixed(2)}`;
+}
+
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -165,6 +173,22 @@ export async function POST(req, { params }) {
         }
         y -= 6;
       }
+
+      // Amount + company charged (if present)
+        {
+          const amountText = formatMoneyFromCents(p.amountCents);
+          const hasCompany = typeof p.companyCharged === "boolean";
+
+          if (amountText || hasCompany) {
+            const companyText = hasCompany ? (p.companyCharged ? "Yes" : "No") : "N/A";
+            page.drawText(
+              `Amount: ${amountText || "(n/a)"}    Company Charged: ${companyText}`,
+              { x: margin, y, size: 11, font }
+            );
+            y -= 16;
+          }
+        }
+
 
       // Optional: uploaded date
       if (p.uploadedAt) {

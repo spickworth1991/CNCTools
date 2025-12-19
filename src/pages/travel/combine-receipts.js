@@ -239,6 +239,12 @@ export default function CombineReceiptsPage() {
     window.open(`/api/travel/projects/${encodeURIComponent(selectedId)}/pdf`, "_blank");
   }
 
+  function downloadCsv() {
+    if (!selectedId) return;
+    window.open(`/api/travel/projects/${encodeURIComponent(selectedId)}/csv`, "_blank");
+  }
+
+
   async function deleteClosedProject() {
     if (!selectedId || !selected) return;
     if (selected.status !== "closed") return alert("Only CLOSED projects can be deleted.");
@@ -390,6 +396,9 @@ export default function CombineReceiptsPage() {
                 </button>
                 <button className="button" onClick={closeProject} disabled={selected.status !== "open"}>
                   Close + Generate PDF
+                </button>
+                <button className="button secondary" onClick={downloadCsv}>
+                  Download CSV
                 </button>
               </div>
 

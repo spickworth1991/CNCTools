@@ -143,10 +143,13 @@ export async function POST(req, { params }) {
       contentType,
       ext,
 
-      // NEW
+      // Original filename for display purposes
+      originalName: String(file?.name || ""),
+
       amountCents,
       companyCharged,
     });
+
 
     meta.photos = photos;
     meta.updatedAt = nowIso();
