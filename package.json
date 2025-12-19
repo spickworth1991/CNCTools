@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "proxy": "wrangler pages dev --proxy 3000 --port 8788",
     "build": "next build",
     "pages:build": "next-on-pages",
     "preview": "wrangler pages dev .vercel/output/static",

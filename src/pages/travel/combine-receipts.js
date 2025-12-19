@@ -18,6 +18,16 @@ function todayYYYYMMDD() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function nowDateTimeLocal() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+}
+
 async function convertHeicToJpeg(file) {
   const mod = await import("heic2any");
   const heic2any = mod.default || mod;
@@ -51,7 +61,10 @@ async function convertAnyImageToJpeg(file) {
     const ctx = canvas.getContext("2d");
     ctx.drawImage(img, 0, 0);
 
-    const blob = await new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/jpeg", 0.9));
+    const blob = await new Promise((resolve) =>
+      canvas.toBlob((b) => resolve(b), "image/jpeg", 0.9)
+    );
+
     if (!blob) throw new Error("Conversion failed.");
 
     const base = (file.name || "photo").replace(/\.[^.]+$/, "");
@@ -73,17 +86,21 @@ export default function CombineReceiptsPage() {
   const [customerName, setCustomerName] = useState("");
   const [locationCity, setLocationCity] = useState("");
   const [locationState, setLocationState] = useState("");
-  const [travelStartDateTime, setTravelStartDateTime] = useState(""); // ✅ single input
+  const [travelStartDateTime, setTravelStartDateTime] = useState(nowDateTimeLocal());
 
-  // Close form
-  const [travelEndClose, setTravelEndClose] = useState(todayYYYYMMDD());
+  // Close form (NOW datetime-local)
+  const [travelEndDateTime, setTravelEndDateTime] = useState(nowDateTimeLocal());
 
   // Upload form
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadDesc, setUploadDesc] = useState("");
   const [uploadFile, setUploadFile] = useState(null);
-  const [uploadAmount, setUploadAmount] = useState(""); // ✅ required by server
-  const [uploadCompanyCharged, setUploadCompanyCharged] = useState(false); // ✅ required by server
+
+  const [uploadAmount, setUploadAmount] = useState("");
+  const [uploadCompanyCharged, setUploadCompanyCharged] = useState(false);
+
+  // NEW: receipt date input
+  const [uploadReceiptDate, setUploadReceiptDate] = useState("");
 
   async function refreshProjects(autoSelectId) {
     setLoadingProjects(true);
@@ -107,8 +124,9 @@ export default function CombineReceiptsPage() {
     const proj = data.project || null;
     setSelected(proj);
 
-    if (proj?.travelEnd) setTravelEndClose(proj.travelEnd);
-    else setTravelEndClose(todayYYYYMMDD());
+    // keep end datetime synced if it exists, else now
+    if (proj?.travelEndDateTime) setTravelEndDateTime(proj.travelEndDateTime);
+    else setTravelEndDateTime(nowDateTimeLocal());
   }
 
   useEffect(() => {
@@ -119,8 +137,14 @@ export default function CombineReceiptsPage() {
     loadProject(selectedId);
   }, [selectedId]);
 
-  const openProjects = useMemo(() => projects.filter((p) => (p.status || "open") === "open"), [projects]);
-  const closedProjects = useMemo(() => projects.filter((p) => (p.status || "open") === "closed"), [projects]);
+  const openProjects = useMemo(
+    () => projects.filter((p) => (p.status || "open") === "open"),
+    [projects]
+  );
+  const closedProjects = useMemo(
+    () => projects.filter((p) => (p.status || "open") === "closed"),
+    [projects]
+  );
 
   async function createProject(e) {
     e.preventDefault();
@@ -134,19 +158,17 @@ export default function CombineReceiptsPage() {
           customerName: customerName.trim(),
           locationCity: locationCity.trim(),
           locationState: locationState.trim(),
-          travelStartDateTime: travelStartDateTime,
+          travelStartDateTime, // server derives travelStart YYYY-MM-DD
         }),
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to create project");
       await refreshProjects(data.projectId);
-
       setServiceReportNumber("");
       setCustomerName("");
       setLocationCity("");
       setLocationState("");
-      setTravelStartDateTime("");
+      setTravelStartDateTime(nowDateTimeLocal());
     } catch (err) {
       alert(err?.message || String(err));
     } finally {
@@ -165,7 +187,9 @@ export default function CombineReceiptsPage() {
     try {
       let file = uploadFile;
 
-      const isHeic = /(\.heic|\.heif)$/i.test(file.name || "") || /image\/hei(c|f)/i.test(file.type || "");
+      const isHeic =
+        /(\.heic|\.heif)$/i.test(file.name || "") ||
+        /image\/hei(c|f)/i.test(file.type || "");
       if (isHeic) file = await convertHeicToJpeg(file);
 
       const lowerName = (file.name || "").toLowerCase();
@@ -185,6 +209,9 @@ export default function CombineReceiptsPage() {
       fd.append("amount", String(uploadAmount).trim());
       fd.append("companyCharged", uploadCompanyCharged ? "true" : "false");
 
+      // NEW: receipt date (optional)
+      if (uploadReceiptDate) fd.append("receiptDate", uploadReceiptDate);
+
       const res = await fetch(`/api/travel/projects/${encodeURIComponent(selectedId)}/photos`, {
         method: "POST",
         body: fd,
@@ -198,6 +225,7 @@ export default function CombineReceiptsPage() {
       setUploadFile(null);
       setUploadAmount("");
       setUploadCompanyCharged(false);
+      setUploadReceiptDate("");
 
       await loadProject(selectedId);
       await refreshProjects();
@@ -210,7 +238,7 @@ export default function CombineReceiptsPage() {
 
   async function closeProject() {
     if (!selectedId) return;
-    if (!travelEndClose) return alert("Pick a Travel End date.");
+    if (!travelEndDateTime) return alert("Pick a Travel End date/time.");
     if (!confirm("Close this project and generate the PDF?")) return;
 
     setBusy("Generating PDF…");
@@ -218,7 +246,7 @@ export default function CombineReceiptsPage() {
       const res = await fetch(`/api/travel/projects/${encodeURIComponent(selectedId)}/close`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ travelEnd: travelEndClose }),
+        body: JSON.stringify({ travelEndDateTime }), // server derives travelEnd YYYY-MM-DD
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Close failed");
@@ -244,11 +272,9 @@ export default function CombineReceiptsPage() {
     window.open(`/api/travel/projects/${encodeURIComponent(selectedId)}/csv`, "_blank");
   }
 
-
   async function deleteClosedProject() {
     if (!selectedId || !selected) return;
     if (selected.status !== "closed") return alert("Only CLOSED projects can be deleted.");
-
     const ok = confirm(
       `DELETE this closed project?\n\n${selected.serviceReportNumber} — ${selected.customerName}\n\nThis cannot be undone.`
     );
@@ -289,22 +315,10 @@ export default function CombineReceiptsPage() {
           <h3>Create Project</h3>
           <form onSubmit={createProject}>
             <label>Service Report # (PDF filename)</label>
-            <input
-              className="input"
-              value={serviceReportNumber}
-              onChange={(e) => setServiceReportNumber(e.target.value)}
-              placeholder="e.g. SR-12345"
-              required
-            />
+            <input className="input" value={serviceReportNumber} onChange={(e) => setServiceReportNumber(e.target.value)} required />
 
             <label>Customer Name</label>
-            <input
-              className="input"
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              placeholder="e.g. ABC Manufacturing"
-              required
-            />
+            <input className="input" value={customerName} onChange={(e) => setCustomerName(e.target.value)} required />
 
             <label>Location City</label>
             <input className="input" value={locationCity} onChange={(e) => setLocationCity(e.target.value)} required />
@@ -313,17 +327,9 @@ export default function CombineReceiptsPage() {
             <input className="input" value={locationState} onChange={(e) => setLocationState(e.target.value)} required />
 
             <label>Travel Start (date + time)</label>
-            <input
-              className="input"
-              type="datetime-local"
-              value={travelStartDateTime}
-              onChange={(e) => setTravelStartDateTime(e.target.value)}
-              required
-            />
+            <input className="input" type="datetime-local" value={travelStartDateTime} onChange={(e) => setTravelStartDateTime(e.target.value)} required />
 
-            <button className="button" type="submit">
-              Create Project
-            </button>
+            <button className="button" type="submit">Create Project</button>
           </form>
 
           <div className="hr" />
@@ -361,52 +367,36 @@ export default function CombineReceiptsPage() {
           ) : (
             <>
               <div style={{ marginBottom: 10 }}>
-                <div>
-                  <strong>Service Report:</strong> {selected.serviceReportNumber}
-                </div>
-                <div>
-                  <strong>Customer:</strong> {selected.customerName}
-                </div>
-                <div>
-                  <strong>Travel Dates:</strong> {selected.travelStart}{" "}
-                  {selected.travelEnd ? `to ${selected.travelEnd}` : "(end date picked at close)"}
-                </div>
-                <div>
-                  <strong>Status:</strong> {selected.status}
-                </div>
+                <div><strong>Service Report:</strong> {selected.serviceReportNumber}</div>
+                <div><strong>Customer:</strong> {selected.customerName}</div>
+                <div><strong>Location:</strong> {selected.locationCity}, {selected.locationState}</div>
+                <div><strong>Travel Dates:</strong> {selected.travelStart} {selected.travelEnd ? `to ${selected.travelEnd}` : "(end picked at close)"}</div>
+                <div><strong>Status:</strong> {selected.status}</div>
                 <div className="small">Created: {fmtDate(selected.createdAt)}</div>
                 {selected.closedAt ? <div className="small">Closed: {fmtDate(selected.closedAt)}</div> : null}
               </div>
 
               {selected.status === "open" ? (
                 <div style={{ marginBottom: 10 }}>
-                  <label>Travel End Date (selected when closing)</label>
+                  <label>Travel End (date + time)</label>
                   <input
                     className="input"
-                    type="date"
-                    value={travelEndClose}
-                    onChange={(e) => setTravelEndClose(e.target.value)}
+                    type="datetime-local"
+                    value={travelEndDateTime}
+                    onChange={(e) => setTravelEndDateTime(e.target.value)}
                   />
                 </div>
               ) : null}
 
               <div className="row">
-                <button className="button" onClick={downloadPdf} disabled={selected.status !== "closed"}>
-                  Download PDF
-                </button>
-                <button className="button" onClick={closeProject} disabled={selected.status !== "open"}>
-                  Close + Generate PDF
-                </button>
-                <button className="button secondary" onClick={downloadCsv}>
-                  Download CSV
-                </button>
+                <button className="button" onClick={downloadPdf} disabled={selected.status !== "closed"}>Download PDF</button>
+                <button className="button" onClick={downloadCsv} disabled={selected.status !== "closed"}>Download CSV</button>
+                <button className="button" onClick={closeProject} disabled={selected.status !== "open"}>Close + Generate PDF</button>
               </div>
 
               {selected.status === "closed" ? (
                 <div style={{ marginTop: 10 }}>
-                  <button className="button danger" onClick={deleteClosedProject}>
-                    Delete Closed Project
-                  </button>
+                  <button className="button danger" onClick={deleteClosedProject}>Delete Closed Project</button>
                 </div>
               ) : null}
 
@@ -415,53 +405,42 @@ export default function CombineReceiptsPage() {
               <h3>Add Receipt Photo</h3>
               <form onSubmit={uploadPhoto}>
                 <label>Title (required)</label>
-                <input
-                  className="input"
-                  value={uploadTitle}
-                  onChange={(e) => setUploadTitle(e.target.value)}
-                  placeholder="e.g. Hotel, Gas, Meal, Parking"
-                  required
-                />
+                <input className="input" value={uploadTitle} onChange={(e) => setUploadTitle(e.target.value)} required />
 
                 <label>Description (optional)</label>
-                <textarea
-                  className="input"
-                  value={uploadDesc}
-                  onChange={(e) => setUploadDesc(e.target.value)}
-                  placeholder="Notes (location, reason, etc.)"
-                  rows={3}
-                />
+                <textarea className="input" value={uploadDesc} onChange={(e) => setUploadDesc(e.target.value)} rows={3} />
 
-                <label>Amount (required)</label>
+                <label>Receipt Date (optional — defaults to upload date)</label>
                 <input
                   className="input"
-                  inputMode="decimal"
-                  placeholder="e.g. 23.45"
+                  type="date"
+                  value={uploadReceiptDate}
+                  onChange={(e) => setUploadReceiptDate(e.target.value)}
+                />
+
+                <label>Amount (USD)</label>
+                <input
+                  className="input"
+                  type="number"
+                  step="0.01"
                   value={uploadAmount}
                   onChange={(e) => setUploadAmount(e.target.value)}
                   required
                 />
 
-                <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <label className="small" style={{ display: "flex", gap: 10, alignItems: "center" }}>
                   <input
                     type="checkbox"
                     checked={uploadCompanyCharged}
                     onChange={(e) => setUploadCompanyCharged(e.target.checked)}
                   />
-                  Company Charged?
+                  Company Charged
                 </label>
 
                 <label>File (any normal phone image; HEIC auto-converts)</label>
-                <input
-                  className="input"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                />
+                <input className="input" type="file" accept="image/*" onChange={(e) => setUploadFile(e.target.files?.[0] || null)} />
 
-                <button className="button" type="submit" disabled={selected.status !== "open"}>
-                  Upload
-                </button>
+                <button className="button" type="submit" disabled={selected.status !== "open"}>Upload</button>
               </form>
 
               <div className="hr" />
@@ -473,9 +452,12 @@ export default function CombineReceiptsPage() {
                   <table>
                     <thead>
                       <tr>
-                        <th style={{ textAlign: "left", padding: 6, borderBottom: "1px solid #333" }}>Preview</th>
+                        <th>Preview</th>
                         <th>Title</th>
                         <th>Description</th>
+                        <th>Receipt Date</th>
+                        <th>Amount</th>
+                        <th>Charged?</th>
                         <th>Filename</th>
                         <th>Uploaded</th>
                       </tr>
@@ -483,7 +465,7 @@ export default function CombineReceiptsPage() {
                     <tbody>
                       {selected.photos.map((ph) => (
                         <tr key={ph.photoId}>
-                          <td style={{ padding: 6, borderBottom: "1px solid #222", width: 84 }}>
+                          <td style={{ width: 84 }}>
                             <img
                               src={`/api/travel/projects/${encodeURIComponent(selectedId)}/photos/${ph.photoId}`}
                               alt={ph.title || "Receipt"}
@@ -501,6 +483,9 @@ export default function CombineReceiptsPage() {
                           </td>
                           <td>{ph.title}</td>
                           <td className="small">{ph.description || ""}</td>
+                          <td className="small">{ph.receiptDate || "(upload date)"}</td>
+                          <td className="small">{typeof ph.amount === "number" ? ph.amount.toFixed(2) : ""}</td>
+                          <td className="small">{ph.companyCharged ? "Yes" : "No"}</td>
                           <td className="small">{ph.originalName || "(unknown)"}</td>
                           <td className="small">{fmtDate(ph.uploadedAt)}</td>
                         </tr>
