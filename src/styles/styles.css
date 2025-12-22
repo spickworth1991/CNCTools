@@ -109,6 +109,11 @@ label {
   border-color: rgba(239,68,68,0.45);
 }
 
+.button.danger:hover {
+  background: #991b1b;
+}
+
+
 .row {
   display: flex;
   gap: 10px;

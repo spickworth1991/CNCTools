@@ -101,6 +101,33 @@ export default function CombineReceiptsPage() {
     }
   }
 
+  async function deletePhoto(photoId) {
+    if (!selectedId || !selected) return;
+    if (!photoId) return;
+
+    const ok = confirm("Delete this photo? This cannot be undone.");
+    if (!ok) return;
+
+    setBusy("Deleting photo…");
+    try {
+      const res = await fetch(
+        `/api/travel/projects/${encodeURIComponent(selectedId)}/photos/${encodeURIComponent(photoId)}`,
+        { method: "DELETE" }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Delete failed");
+
+      // reload project + list so UI updates immediately
+      await loadProject(selectedId);
+      await refreshProjects();
+    } catch (err) {
+      alert(err?.message || String(err));
+    } finally {
+      setBusy("");
+    }
+  }
+
+
   async function loadProject(id) {
     if (!id) {
       setSelected(null);
@@ -497,6 +524,7 @@ export default function CombineReceiptsPage() {
                         <th>Filename</th>
                         <th>Receipt Date</th>
                         <th>Uploaded</th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -523,6 +551,16 @@ export default function CombineReceiptsPage() {
                           <td className="small">{ph.originalName || "(unknown)"}</td>
                           <td className="small">{ph.receiptDate || ""}</td>
                           <td className="small">{fmtDate(ph.uploadedAt)}</td>
+                          <td>
+                            <button
+                              type="button"
+                              className="button danger"
+                              onClick={() => deletePhoto(ph.photoId)}
+                              disabled={selected?.status !== "open"}   // optional: only allow delete while open
+                            >
+                              Delete
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
