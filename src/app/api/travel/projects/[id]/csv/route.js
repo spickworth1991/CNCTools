@@ -1,67 +1,34 @@
+// src/app/api/travel/projects/[id]/csv/route.js
 import { getJson } from "../../../../_cf";
 
 export const runtime = "edge";
 
-// Default rows (A16-A31) from your sheet. You can edit these later.
+// These match your paper sheet A16-A31 order.
+// If we can't map a receipt title into one of these, we append it at the bottom (future-proof).
 const DEFAULT_CATEGORIES = [
-  "HOTEL",
+  "HOTEL:",
   "BREAKFAST:9",
   "LUNCH:16",
   "DINNER:26",
-  "RAILROAD/AIR/BUS FARES",
-  "LOCAL TRANSPORTATION",
-  "CAR RENTAL",
+  "RAILROAD/AIR/BUS FARES:",
+  "LOCAL TRANSPORTATION:",
   "MILEAGE REIMBURSEMENT @ $0.7",
-  "AUTO REPAIRS - TIRES",
-  "GAS-OIL LUBRICATION-WASH",
-  "TELEPHONE and TELEGRAPH",
-  "TIPS",
-  "ITEMIZED EXPENDITURES",
-  "AIRPORT PARKING",
-  "TOLL ROADS",
+  "AUTO REPAIRS - TIRES:",
+  "GAS-OIL LUBRICATION-WASH:",
+  "TELEPHONE and TELEGRAPH:",
+  "TIPS:",
+  "ITEMIZED EXPENDITURES:",
+  "AIRPORT PARKING:",
+  "TOLL ROADS:",
+  // Common item; kept as a default row near the bottom.
+  // Note: We still map “car rental” receipts to LOCAL TRANSPORTATION automatically.
+  "CAR RENTAL:",
   "", // spare
   "", // spare
 ];
 
-const EASTERN_TZ = "America/Detroit";
-
 function safeName(s) {
-  return String(s || "expense").replace(/[^\w\-]+/g, "_").slice(0, 80);
-}
-
-function parseYMD(ymd) {
-  // ymd expected "YYYY-MM-DD"
-  const [y, m, d] = String(ymd || "").split("-").map((x) => parseInt(x, 10));
-  if (!y || !m || !d) return null;
-  return new Date(Date.UTC(y, m - 1, d));
-}
-
-function formatMD(dateUtc) {
-  const y = dateUtc.getUTCFullYear();
-  const m = String(dateUtc.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(dateUtc.getUTCDate()).padStart(2, "0");
-  return `${m}/${d}/${y}`;
-}
-
-function addDays(dateUtc, n) {
-  const d = new Date(dateUtc);
-  d.setUTCDate(d.getUTCDate() + n);
-  return d;
-}
-
-function mondayOf(dateUtc) {
-  // Monday = 1, Sunday = 0 in JS getUTCDay
-  const dow = dateUtc.getUTCDay(); // 0..6
-  const delta = (dow === 0 ? -6 : 1 - dow);
-  return addDays(dateUtc, delta);
-}
-
-function ymdFromAnyDateish(s) {
-  if (!s) return "";
-  // If ISO string, take first 10. If already yyyy-mm-dd, ok.
-  const str = String(s);
-  const m = str.match(/^(\d{4}-\d{2}-\d{2})/);
-  return m ? m[1] : "";
+  return String(s || "").replace(/[^\w\-]+/g, "_").slice(0, 80);
 }
 
 function csvEscape(v) {
@@ -70,48 +37,215 @@ function csvEscape(v) {
   return s;
 }
 
+function normalizeTitle(title) {
+  return String(title || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
+}
+
+// Maps whatever the user typed (or any common variation) into a base sheet row key.
+// IMPORTANT: “car rental” goes under LOCAL TRANSPORTATION.
 function titleToCategoryKey(title) {
-  const t = String(title || "").trim().toUpperCase();
-  // normalize common cases
-  if (t === "BREAKFAST") return "BREAKFAST";
-  if (t === "LUNCH") return "LUNCH";
-  if (t === "DINNER") return "DINNER";
-  if (t === "GAS" || t === "FUEL" || t === "GASOLINE") return "GAS-OIL LUBRICATION-WASH";
-  if (t === "CAR RENTAL" || t === "RENTAL CAR" || t === "RENTAL") return "CAR RENTAL";
-  return t;
+  const t = normalizeTitle(title);
+  if (!t) return "";
+
+  // Meals
+  if (/\bbreakfast\b/.test(t)) return "BREAKFAST";
+  if (/\blunch\b/.test(t)) return "LUNCH";
+  if (/\bdinner\b/.test(t)) return "DINNER";
+
+  // Hotel
+  if (/\b(hotel|lodg|motel|inn|resort)\b/.test(t)) return "HOTEL";
+
+  // Gas / oil / wash
+  if (/\b(gas|fuel|gasoline|petrol|diesel|oil|lube|lubrication|car wash|wash)\b/.test(t)) {
+    return "GAS-OIL LUBRICATION-WASH";
+  }
+
+  // Auto repairs / tires
+  if (/\b(repair|service|maintenance|tire|tires|alignment|brake|brakes|mechanic)\b/.test(t)) {
+    return "AUTO REPAIRS - TIRES";
+  }
+
+  // Mileage reimbursement
+  if (/\b(mileage|miles|mi\.?\b|reimburse)\b/.test(t)) return "MILEAGE REIMBURSEMENT @ $0.7";
+
+  // Phone / telecom
+  if (/\b(phone|telephone|telegraph|cell|mobile|verizon|att|t[- ]mobile)\b/.test(t)) {
+    return "TELEPHONE and TELEGRAPH";
+  }
+
+  // Tips
+  if (/\b(tip|tips|gratuity)\b/.test(t)) return "TIPS";
+
+  // Toll roads
+  if (/\b(toll|tollway|turnpike)\b/.test(t)) return "TOLL ROADS";
+
+  // Airport parking
+  if (t.includes("airport") && /\b(parking|garage|lot)\b/.test(t)) return "AIRPORT PARKING";
+
+  // General parking
+  if (/\b(parking|garage|lot)\b/.test(t)) return "LOCAL TRANSPORTATION";
+
+  // RAIL/AIR/BUS fares (plane/flight/train/bus)
+  if (/\b(air|airfare|airline|flight|plane|ticket|rail|train|amtrak|bus|greyhound)\b/.test(t)) {
+    return "RAILROAD/AIR/BUS FARES";
+  }
+
+  // Local transportation (uber/lyft/taxi/shuttle/transit)
+  if (/\b(uber|lyft|taxi|cab|shuttle|transit|subway|metro|streetcar|tram)\b/.test(t)) {
+    return "LOCAL TRANSPORTATION";
+  }
+
+  // Car rental: map to LOCAL TRANSPORTATION (per your requirement)
+  if (
+    /\b(rental)\b/.test(t) &&
+    (/\bcar\b/.test(t) ||
+      /\b(hertz|avis|budget|enterprise|alamo|national|sixt|thrifty|dollar)\b/.test(t))
+  ) {
+    return "LOCAL TRANSPORTATION";
+  }
+
+  // If nothing matched: return an uppercase label so it can be appended as a new row at the bottom.
+  return String(title || "").trim().toUpperCase();
 }
 
-function parseDateTimeLocal(s) {
-  const v = String(s || "").trim();
-  const m = v.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
-  if (!m) return null;
-  const y = Number(m[1]);
-  const mo = Number(m[2]);
-  const d = Number(m[3]);
-  const hh = Number(m[4]);
-  const mm = Number(m[5]);
-  if (!y || !mo || !d) return null;
-  return { y, mo, d, hh: Number.isFinite(hh) ? hh : 0, mm: Number.isFinite(mm) ? mm : 0 };
+function centsFromAny(v) {
+  if (v === null || v === undefined) return 0;
+  if (typeof v === "number" && Number.isFinite(v)) return Math.round(v * 100);
+
+  const s = String(v).trim();
+  if (!s) return 0;
+
+  // strip $ and commas
+  const cleaned = s.replace(/[$,]/g, "");
+  const n = Number(cleaned);
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(n * 100);
 }
 
-function shouldIncludeMealForDay(meta, dayUtc, mealKey) {
-  // Heuristic: include per-diem meals for all days.
-  // On the FIRST travel day, omit meals that occur before the start time.
-  // If we can't parse start time, include everything.
-  const start = parseDateTimeLocal(meta?.travelStartDateTime);
-  if (!start) return true;
+function isoToDateOnly(isoLike) {
+  // accepts YYYY-MM-DD or datetime-local or ISO; returns YYYY-MM-DD if possible
+  const s = String(isoLike || "").trim();
+  if (!s) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return "";
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
 
-  const dayY = dayUtc.getUTCFullYear();
-  const dayM = dayUtc.getUTCMonth() + 1;
-  const dayD = dayUtc.getUTCDate();
+function buildTravelDays(meta) {
+  const start = isoToDateOnly(meta.travelStart);
+  const end = isoToDateOnly(meta.travelEnd);
+  if (!start || !end) return [];
 
-  const isFirstDay = dayY === start.y && dayM === start.mo && dayD === start.d;
-  if (!isFirstDay) return true;
+  const ds = new Date(`${start}T00:00:00`);
+  const de = new Date(`${end}T00:00:00`);
+  if (Number.isNaN(ds.getTime()) || Number.isNaN(de.getTime())) return [];
 
-  // Cutoffs (local-ish): breakfast 10, lunch 14, dinner 19
-  const startMinutes = start.hh * 60 + start.mm;
-  const cutoff = mealKey === "BREAKFAST" ? 10 * 60 : mealKey === "LUNCH" ? 14 * 60 : 19 * 60;
-  return startMinutes < cutoff;
+  // inclusive list of dates
+  const out = [];
+  for (let d = new Date(ds); d <= de; d.setDate(d.getDate() + 1)) {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    out.push(`${yyyy}-${mm}-${dd}`);
+  }
+  return out;
+}
+
+// Returns an array of weeks, each week is 7 entries (Mon..Sun), each entry is {date, dayIndex} or null
+function splitIntoWeeks(travelDays) {
+  // build actual Date objects
+  const days = travelDays.map((s) => new Date(`${s}T00:00:00`));
+  if (!days.length) return [];
+
+  // Find Monday of the first week
+  const first = new Date(days[0]);
+  const day = first.getDay(); // Sun=0..Sat=6
+  // Convert to Mon-based index: Mon=0..Sun=6
+  const monIndex = (day + 6) % 7;
+  first.setDate(first.getDate() - monIndex);
+
+  const last = new Date(days[days.length - 1]);
+  const weeks = [];
+  let cur = new Date(first);
+
+  while (cur <= last) {
+    const week = [];
+    for (let i = 0; i < 7; i++) {
+      const yyyy = cur.getFullYear();
+      const mm = String(cur.getMonth() + 1).padStart(2, "0");
+      const dd = String(cur.getDate()).padStart(2, "0");
+      const dateStr = `${yyyy}-${mm}-${dd}`;
+
+      if (travelDays.includes(dateStr)) week.push(dateStr);
+      else week.push(null);
+
+      cur.setDate(cur.getDate() + 1);
+    }
+    weeks.push(week);
+  }
+
+  return weeks;
+}
+
+function addMeals(meta, weekKey, weekSums, travelDays) {
+  // We only insert meals if we have travel start/end and also have time-of-day hints.
+  // For now, use date-only logic with provided fields if they exist:
+  const startDT = String(meta.travelStartDateTime || "").trim();
+  const endDT = String(meta.travelEndDateTime || "").trim();
+
+  const startDate = isoToDateOnly(meta.travelStart);
+  const endDate = isoToDateOnly(meta.travelEnd);
+
+  // If no time inputs yet, still insert full meals across travel range (except your rules require times).
+  // Keep current behavior conservative: only do time-based inclusion if times exist.
+  const hasTimes = !!startDT && !!endDT;
+
+  const startHour = hasTimes ? new Date(startDT).getHours() : null;
+  const endHour = hasTimes ? new Date(endDT).getHours() : null;
+
+  const firstDay = startDate;
+  const lastDay = endDate;
+
+  for (const d of travelDays) {
+    // default full day meals
+    let breakfast = true;
+    let lunch = true;
+    let dinner = true;
+
+    // Apply your specific rules on first/last day when times are present:
+    if (hasTimes) {
+      if (d === firstDay) {
+        // leave before 7am -> breakfast; otherwise no breakfast
+        breakfast = startHour !== null ? startHour < 7 : breakfast;
+      }
+      if (d === lastDay) {
+        // return after 7pm -> dinner; otherwise no dinner
+        dinner = endHour !== null ? endHour >= 19 : dinner;
+      }
+    }
+
+    // Build week day index (Mon..Sun)
+    const week = weekKey;
+    const weekIndex = week.findIndex((x) => x === d);
+    if (weekIndex === -1) continue;
+
+    const bump = (k, cents) => {
+      if (!weekSums.has(k)) weekSums.set(k, [0, 0, 0, 0, 0, 0, 0]);
+      weekSums.get(k)[weekIndex] += cents;
+    };
+
+    if (breakfast) bump("BREAKFAST", 900);
+    if (lunch) bump("LUNCH", 1600);
+    if (dinner) bump("DINNER", 2600);
+  }
 }
 
 export async function GET(_req, { params }) {
@@ -119,109 +253,69 @@ export async function GET(_req, { params }) {
   if (!id) return Response.json({ error: "Missing id" }, { status: 400 });
 
   const meta = await getJson(`travel/projects/${id}/meta.json`);
-  if (!meta) return Response.json({ error: "Project not found" }, { status: 404 });
+  if (!meta) return Response.json({ error: "Not found" }, { status: 404 });
 
-  const travelStart = parseYMD(meta.travelStart);
-  const travelEnd = parseYMD(meta.travelEnd);
-  if (!travelStart || !travelEnd) {
-    return Response.json({ error: "Project must have travelStart + travelEnd to export CSV." }, { status: 400 });
+  const travelDays = buildTravelDays(meta);
+  if (!travelDays.length) {
+    return Response.json({ error: "Project must have travelStart and travelEnd to export CSV." }, { status: 400 });
   }
 
-  // Build inclusive list of dates
-  const days = [];
-  for (let d = travelStart; d <= travelEnd; d = addDays(d, 1)) {
-    days.push(d);
-  }
+  const weeks = splitIntoWeeks(travelDays);
 
-  // Group travel days by week Monday
-  const weeks = new Map(); // mondayYMD -> dates[]
-  for (const d of days) {
-    const mon = mondayOf(d);
-    const key = `${mon.getUTCFullYear()}-${String(mon.getUTCMonth() + 1).padStart(2, "0")}-${String(
-      mon.getUTCDate()
-    ).padStart(2, "0")}`;
-    if (!weeks.has(key)) weeks.set(key, []);
-    weeks.get(key).push(d);
-  }
+  // Collect sums per week (weekKey is an array of 7 dates/nulls)
+  const sumsByWeek = new Map();
 
-  // Index receipts by (weekMondayKey, dowIndex 0..6) and category
-  // Columns are Monday..Sunday => dowIndex = 0..6 (Mon=0)
-  const sums = new Map(); // weekKey -> Map<catKey, number[7]>
-  const photos = Array.isArray(meta.photos) ? meta.photos : [];
+  // receipts/photos -> add into week sums
+  for (const p of Array.isArray(meta.photos) ? meta.photos : []) {
+    const receiptDate = isoToDateOnly(p.receiptDate || p.uploadedAt || "");
+    if (!receiptDate) continue;
 
-  // Auto-fill per-diem meals (Breakfast/Lunch/Dinner) across the travel days.
-  // This makes the sheet fill in even when you didn't upload meal receipts.
-  const MEAL_CENTS = { BREAKFAST: 900, LUNCH: 1600, DINNER: 2600 };
-  for (const day of days) {
-    const mon = mondayOf(day);
-    const weekKey = `${mon.getUTCFullYear()}-${String(mon.getUTCMonth() + 1).padStart(2, "0")}-${String(
-      mon.getUTCDate()
-    ).padStart(2, "0")}`;
-    const dow = day.getUTCDay(); // Sun=0..Sat=6
-    const col = dow === 0 ? 6 : dow - 1; // Mon=0..Sun=6
+    const categoryKey = titleToCategoryKey(p.title || "");
 
-    if (!sums.has(weekKey)) sums.set(weekKey, new Map());
-    const w = sums.get(weekKey);
+    const amountCents = centsFromAny(p.amount);
+    if (!amountCents) continue;
 
-    for (const mealKey of ["BREAKFAST", "LUNCH", "DINNER"]) {
-      if (!shouldIncludeMealForDay(meta, day, mealKey)) continue;
-      if (!w.has(mealKey)) w.set(mealKey, [0, 0, 0, 0, 0, 0, 0]);
-      w.get(mealKey)[col] += MEAL_CENTS[mealKey] || 0;
+    // find the week and day index where this date lands
+    for (const weekKey of weeks) {
+      const dayIdx = weekKey.findIndex((d) => d === receiptDate);
+      if (dayIdx === -1) continue;
+
+      if (!sumsByWeek.has(weekKey)) sumsByWeek.set(weekKey, new Map());
+      const weekSums = sumsByWeek.get(weekKey);
+
+      if (!weekSums.has(categoryKey)) weekSums.set(categoryKey, [0, 0, 0, 0, 0, 0, 0]);
+      weekSums.get(categoryKey)[dayIdx] += amountCents;
+      break;
     }
   }
 
-  for (const p of photos) {
-    const cents = Number(p?.amountCents);
-    if (!Number.isFinite(cents) || cents <= 0) continue;
-
-    const ymd = ymdFromAnyDateish(p?.receiptDate || p?.uploadedAt);
-    const d = parseYMD(ymd);
-    if (!d) continue;
-
-    const mon = mondayOf(d);
-    const weekKey = `${mon.getUTCFullYear()}-${String(mon.getUTCMonth() + 1).padStart(2, "0")}-${String(
-      mon.getUTCDate()
-    ).padStart(2, "0")}`;
-
-    const dow = d.getUTCDay(); // Sun=0..Sat=6
-    const col = dow === 0 ? 6 : dow - 1; // Mon=0..Sun=6
-
-    const catKey = titleToCategoryKey(p?.title);
-    if (!sums.has(weekKey)) sums.set(weekKey, new Map());
-    const w = sums.get(weekKey);
-    if (!w.has(catKey)) w.set(catKey, [0, 0, 0, 0, 0, 0, 0]);
-    w.get(catKey)[col] += cents;
+  // Add meals (if you have date/time inputs)
+  for (const weekKey of weeks) {
+    if (!sumsByWeek.has(weekKey)) sumsByWeek.set(weekKey, new Map());
+    const weekSums = sumsByWeek.get(weekKey);
+    addMeals(meta, weekKey, weekSums, travelDays);
   }
 
   // Emit CSV
   const lines = [];
   const location = [meta.locationCity, meta.locationState].filter(Boolean).join(", ");
 
-  for (const [weekKey, travelDates] of [...weeks.entries()].sort()) {
-    const mon = parseYMD(weekKey);
-    const headerDates = [0, 1, 2, 3, 4, 5, 6].map((i) => formatMD(addDays(mon, i)));
+  // Base keys that are always present in the sheet (anything else will append below)
+  const defaultBaseKeys = new Set(
+    DEFAULT_CATEGORIES.map((rowLabel) => String(rowLabel || "").split(":")[0].trim().toUpperCase())
+  );
 
-    // Fill company/city across only the travel-day columns for this week.
-    const activeCols = [false, false, false, false, false, false, false];
-    for (const d of travelDates) {
-      const dow = d.getUTCDay();
-      const col = dow === 0 ? 6 : dow - 1;
-      activeCols[col] = true;
-    }
-    const fillAcross = (label, value) => {
-      const row = [label];
-      for (let i = 0; i < 7; i++) row.push(activeCols[i] ? (value || "") : "");
-      return row;
-    };
+  for (const weekKey of weeks) {
+    const headerDates = weekKey.map((d) => (d ? d : ""));
 
-    lines.push(csvEscape(`WEEK OF ${formatMD(mon)}`));
     lines.push(["", "MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(csvEscape).join(","));
-    lines.push(fillAcross("Company", meta.customerName || "").map(csvEscape).join(","));
-    lines.push(fillAcross("City/State", location || "").map(csvEscape).join(","));
+    lines.push(["Company", ...new Array(7).fill(meta.customerName || "")].map(csvEscape).join(","));
+    lines.push(["City/State", ...new Array(7).fill(location || "")].map(csvEscape).join(","));
     lines.push(["Category", ...headerDates].map(csvEscape).join(","));
 
-    const weekSums = sums.get(weekKey) || new Map();
+    const weekSums = sumsByWeek.get(weekKey) || new Map();
 
+    // Default sheet rows
     for (const rowLabel of DEFAULT_CATEGORIES) {
       const base = String(rowLabel || "");
       const baseKey = base.split(":")[0].trim().toUpperCase();
@@ -230,6 +324,17 @@ export async function GET(_req, { params }) {
       const dollars = arr.map((c) => (c ? (c / 100).toFixed(2) : ""));
 
       lines.push([rowLabel, ...dollars].map(csvEscape).join(","));
+    }
+
+    // Future-proof: append any unmatched categories so you don't lose money in export
+    const extraKeys = [...weekSums.keys()]
+      .filter((k) => k && !defaultBaseKeys.has(k))
+      .sort((a, b) => a.localeCompare(b));
+
+    for (const k of extraKeys) {
+      const arr = weekSums.get(k) || [0, 0, 0, 0, 0, 0, 0];
+      const dollars = arr.map((c) => (c ? (c / 100).toFixed(2) : ""));
+      lines.push([k, ...dollars].map(csvEscape).join(","));
     }
 
     lines.push(""); // blank line between weeks
