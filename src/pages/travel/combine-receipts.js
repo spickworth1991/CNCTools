@@ -128,11 +128,12 @@ export default function CombineReceiptsPage() {
   }
 
 
-  async function loadProject(id) {
+   async function loadProject(id) {
     if (!id) {
       setSelected(null);
       return;
     }
+
     const res = await fetch(`/api/travel/projects/${encodeURIComponent(id)}`, { method: "GET" });
     const data = await res.json();
     const proj = data.project || null;
@@ -140,7 +141,30 @@ export default function CombineReceiptsPage() {
 
     // Keep whatever was last typed unless project has an explicit end.
     if (proj?.travelEnd) setTravelEndClose(proj.travelEnd);
+
+    // ✅ Make receipt date default to something that will actually land inside the CSV week:
+    // - If project is closed (travelEnd exists), clamp “today” into [travelStart..travelEnd]
+    // - Otherwise default to today
+    try {
+      const today = todayYYYYMMDD();
+
+      const start = String(proj?.travelStart || "").slice(0, 10);
+      const end = String(proj?.travelEnd || "").slice(0, 10);
+
+      if (start && end) {
+        // closed: clamp
+        if (today < start) setUploadReceiptDate(start);
+        else if (today > end) setUploadReceiptDate(end);
+        else setUploadReceiptDate(today);
+      } else {
+        // open: default to today
+        setUploadReceiptDate(today);
+      }
+    } catch {
+      setUploadReceiptDate(todayYYYYMMDD());
+    }
   }
+
 
   useEffect(() => {
     refreshProjects();
