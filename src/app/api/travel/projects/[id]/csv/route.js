@@ -260,6 +260,8 @@ export async function GET(_req, { params }) {
     return Response.json({ error: "Project must have travelStart and travelEnd to export CSV." }, { status: 400 });
   }
 
+  // Last day in the travel window (used as a safe fallback date)
+  const travelEnd = travelDays[travelDays.length - 1];
   const weeks = splitIntoWeeks(travelDays);
 
   // Collect sums per week (weekKey is an array of 7 dates/nulls)
@@ -267,8 +269,15 @@ export async function GET(_req, { params }) {
 
   // receipts/photos -> add into week sums
   for (const p of Array.isArray(meta.photos) ? meta.photos : []) {
-    const receiptDate = isoToDateOnly(p.receiptDate || p.uploadedAt || "");
+    // If receiptDate isn't explicitly set, we fall back to uploadedAt.
+    // Users often upload receipts after returning, so uploadedAt can fall
+    // outside the travel window and would otherwise be dropped.
+    let receiptDate = isoToDateOnly(p.receiptDate || p.uploadedAt || "");
     if (!receiptDate) continue;
+
+    if (!p.receiptDate && !travelDays.includes(receiptDate)) {
+      receiptDate = travelEnd;
+    }
 
     const categoryKey = titleToCategoryKey(p.title || "");
 
