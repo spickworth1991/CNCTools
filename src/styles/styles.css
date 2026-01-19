@@ -181,7 +181,11 @@ label {
   top: 50%;
   left: 50%;
   transform-origin: center center;
-  max-width: none;
+  /* Start with the entire image visible (fit inside the stage). Zooming is via transform. */
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
   user-select: none;
   -webkit-user-drag: none;
 }

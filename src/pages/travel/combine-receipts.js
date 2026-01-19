@@ -20,6 +20,18 @@ function todayYYYYMMDD() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function displayAmountFromPhoto(ph) {
+  // Be resilient to old/new meta shapes.
+  if (!ph) return "";
+  const direct = ph.amount;
+  if (direct != null && String(direct).trim() !== "") return String(direct);
+
+  const cents = Number(ph.amountCents);
+  if (Number.isFinite(cents)) return (cents / 100).toFixed(2);
+
+  return "";
+}
+
 async function convertHeicToJpeg(file) {
   const mod = await import("heic2any");
   const heic2any = mod.default || mod;
@@ -177,7 +189,7 @@ export default function CombineReceiptsPage() {
     setEditPhotoId(ph.photoId);
     setEditTitle(String(ph.title || ""));
     setEditDesc(String(ph.description || ""));
-    setEditAmount(ph.amount != null ? String(ph.amount) : "");
+    setEditAmount(displayAmountFromPhoto(ph));
     setEditCompanyCharged(Boolean(ph.companyCharged));
     setEditReceiptDate(String(ph.receiptDate || ""));
     setShowEditPhotoModal(true);
