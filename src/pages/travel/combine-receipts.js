@@ -98,6 +98,15 @@ export default function CombineReceiptsPage() {
   const [editCompanyCharged, setEditCompanyCharged] = useState(false);
   const [editReceiptDate, setEditReceiptDate] = useState("");
 
+  // Image modal (tap thumbnail -> zoom/pan)
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [imageModalUrl, setImageModalUrl] = useState("");
+  const [imageModalTitle, setImageModalTitle] = useState("");
+  const [imgScale, setImgScale] = useState(1);
+  const [imgOffset, setImgOffset] = useState({ x: 0, y: 0 });
+  const pointersRef = React.useRef(new Map());
+  const gestureRef = React.useRef({ startDist: 0, startScale: 1, startOffset: { x: 0, y: 0 }, startPt: null });
+
   async function refreshProjects(autoSelectId) {
     setLoadingProjects(true);
     try {
@@ -172,6 +181,97 @@ export default function CombineReceiptsPage() {
     setEditCompanyCharged(Boolean(ph.companyCharged));
     setEditReceiptDate(String(ph.receiptDate || ""));
     setShowEditPhotoModal(true);
+  }
+
+  function openImageModal(ph) {
+    if (!ph?.photoId) return;
+    const url = `/api/travel/projects/${encodeURIComponent(selectedId)}/photos/${encodeURIComponent(ph.photoId)}`;
+    setImageModalUrl(url);
+    setImageModalTitle(ph.title || "Receipt");
+    setImgScale(1);
+    setImgOffset({ x: 0, y: 0 });
+    pointersRef.current = new Map();
+    setShowImageModal(true);
+  }
+
+  function clampScale(next) {
+    const s = Number(next);
+    if (!Number.isFinite(s)) return 1;
+    return Math.max(1, Math.min(6, s));
+  }
+
+  function zoomBy(delta) {
+    setImgScale((s) => clampScale(s + delta));
+  }
+
+  function resetImageView() {
+    setImgScale(1);
+    setImgOffset({ x: 0, y: 0 });
+  }
+
+  function onImgPointerDown(e) {
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
+    const m = pointersRef.current;
+    m.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    pointersRef.current = m;
+
+    // start gesture
+    const pts = [...m.values()];
+    if (pts.length === 1) {
+      gestureRef.current = {
+        startDist: 0,
+        startScale: imgScale,
+        startOffset: { ...imgOffset },
+        startPt: { ...pts[0] },
+      };
+    } else if (pts.length >= 2) {
+      const a = pts[0], b = pts[1];
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      gestureRef.current = {
+        startDist: dist,
+        startScale: imgScale,
+        startOffset: { ...imgOffset },
+        startPt: null,
+      };
+    }
+  }
+
+  function onImgPointerMove(e) {
+    if (!showImageModal) return;
+    const m = pointersRef.current;
+    if (!m.has(e.pointerId)) return;
+    m.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    pointersRef.current = m;
+
+    const pts = [...m.values()];
+    if (pts.length >= 2) {
+      const a = pts[0], b = pts[1];
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const g = gestureRef.current;
+      const nextScale = clampScale((g.startScale || 1) * (dist / (g.startDist || 1)));
+      setImgScale(nextScale);
+      return;
+    }
+
+    // pan
+    const g = gestureRef.current;
+    if (!g.startPt) return;
+    const cur = pts[0];
+    const dx = cur.x - g.startPt.x;
+    const dy = cur.y - g.startPt.y;
+    setImgOffset({ x: g.startOffset.x + dx, y: g.startOffset.y + dy });
+  }
+
+  function onImgPointerUp(e) {
+    const m = pointersRef.current;
+    m.delete(e.pointerId);
+    pointersRef.current = m;
   }
 
   async function saveEditPhoto() {
@@ -258,6 +358,11 @@ export default function CombineReceiptsPage() {
 
   const openProjects = useMemo(() => projects.filter((p) => (p.status || "open") === "open"), [projects]);
   const closedProjects = useMemo(() => projects.filter((p) => (p.status || "open") === "closed"), [projects]);
+
+  const editingPhoto = useMemo(() => {
+    const arr = Array.isArray(selected?.photos) ? selected.photos : [];
+    return arr.find((p) => String(p?.photoId || "") === String(editPhotoId || "")) || null;
+  }, [selected, editPhotoId]);
 
   async function createProject(e) {
     e.preventDefault();
@@ -664,8 +769,10 @@ export default function CombineReceiptsPage() {
                                 display: "block",
                                 background: "#111",
                                 border: "1px solid rgba(255,255,255,0.12)",
+                                cursor: "zoom-in",
                               }}
                               loading="lazy"
+                              onClick={() => openImageModal(ph)}
                             />
                           </td>
                           <td>{ph.title}</td>
@@ -706,22 +813,13 @@ export default function CombineReceiptsPage() {
       {/* Close modal */}
       {showCloseModal ? (
         <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.55)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 16,
-            zIndex: 1000,
-          }}
+          className="modalOverlay"
           onMouseDown={(e) => {
             // click outside closes
             if (e.target === e.currentTarget) setShowCloseModal(false);
           }}
         >
-          <div className="card" style={{ width: "min(560px, 100%)" }}>
+          <div className="card modalCard" style={{ width: "min(560px, 100%)" }}>
             <h3 style={{ marginTop: 0 }}>Close Project</h3>
             <div className="small" style={{ marginBottom: 10, opacity: 0.9 }}>
               Optional: choose a <strong>Travel End</strong> date. If you don’t choose a date, it defaults to the current
@@ -752,22 +850,29 @@ export default function CombineReceiptsPage() {
       {/* Edit photo modal */}
       {showEditPhotoModal ? (
         <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.55)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 16,
-            zIndex: 1000,
-          }}
+          className="modalOverlay"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) setShowEditPhotoModal(false);
           }}
         >
-          <div className="card" style={{ width: "min(560px, 100%)" }}>
+          <div className="card modalCard" style={{ width: "min(560px, 100%)" }}>
             <h3 style={{ marginTop: 0 }}>Edit Receipt</h3>
+            {editingPhoto ? (
+              <div className="small" style={{ marginBottom: 10, opacity: 0.9 }}>
+                <div>
+                  <strong>Filename:</strong> {editingPhoto.originalName || "(unknown)"}
+                </div>
+                {editingPhoto.uploadedAt ? (
+                  <div>
+                    <strong>Uploaded:</strong> {fmtDate(editingPhoto.uploadedAt)}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            <div className="small" style={{ opacity: 0.9, marginTop: -4, marginBottom: 10 }}>
+              Editing: <strong>{editTitle || "(untitled)"}</strong>
+            </div>
 
             <label>Title</label>
             <input className="input" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
@@ -809,6 +914,64 @@ export default function CombineReceiptsPage() {
             <div className="row" style={{ marginTop: 12 }}>
               <button className="button" onClick={saveEditPhoto}>Save</button>
               <button className="button secondary" onClick={() => setShowEditPhotoModal(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Image preview modal */}
+      {showImageModal && imageModalUrl ? (
+        <div
+          className="modalOverlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setShowImageModal(false);
+          }}
+        >
+          <div className="card modalCard">
+            <div className="modalToolbar">
+              <div>
+                <strong>{imageModalTitle || "Receipt"}</strong>
+                <div className="small" style={{ opacity: 0.85 }}>
+                  Drag to pan. Use +/- to zoom.
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                <button type="button" className="button secondary" onClick={() => setImgScale((s) => Math.min(5, (Number(s) || 1) + 0.25))}>
+                  +
+                </button>
+                <button type="button" className="button secondary" onClick={() => setImgScale((s) => Math.max(1, (Number(s) || 1) - 0.25))}>
+                  -
+                </button>
+                <button
+                  type="button"
+                  className="button secondary"
+                  onClick={() => {
+                    setImgScale(1);
+                    setImgOffset({ x: 0, y: 0 });
+                  }}
+                >
+                  Reset
+                </button>
+                <button type="button" className="button" onClick={() => setShowImageModal(false)}>
+                  Close
+                </button>
+              </div>
+            </div>
+
+            <div
+              className="imgModalStage"
+              onPointerDown={onImgPointerDown}
+              onPointerMove={onImgPointerMove}
+              onPointerUp={onImgPointerUp}
+              onPointerCancel={onImgPointerUp}
+            >
+              <img
+                src={imageModalUrl}
+                alt={imageModalTitle || "Receipt"}
+                className="imgModalImg"
+                style={{ transform: `translate(-50%, -50%) translate(${imgOffset.x}px, ${imgOffset.y}px) scale(${imgScale})` }}
+                draggable={false}
+              />
             </div>
           </div>
         </div>

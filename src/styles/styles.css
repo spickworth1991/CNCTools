@@ -131,6 +131,74 @@ label {
 
 .tableWrap { overflow-x: auto; }
 
+/* Modals */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 1000;
+}
+
+.modalCard {
+  width: min(680px, 100%);
+  max-height: min(88vh, 900px);
+  overflow: auto;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 18px 48px rgba(0,0,0,0.45);
+}
+
+.modalToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.modalToolbar .row {
+  margin: 0;
+}
+
+.imgModalStage {
+  position: relative;
+  width: 100%;
+  height: 68vh;
+  max-height: 560px;
+  background: #0b0f14;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  overflow: hidden;
+  touch-action: none; /* allow custom pan/zoom */
+}
+
+.imgModalImg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform-origin: center center;
+  max-width: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.modalCard h3 {
+  margin-top: 0;
+}
+
+.imgModalToolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

@@ -303,24 +303,24 @@ export async function POST(req, { params }) {
       const desiredX = (pageW - shownW) / 2;
       const desiredY = imageBottomY + (maxH - shownH) / 2;
 
-      // pdf-lib rotates around (x,y). Compensate so the rotated image
-      // still lands inside the desired bounding box.
+      // pdf-lib rotates counter-clockwise around (x, y).
+      // The rotated image's bounding box shifts relative to (x,y), so we translate
+      // the origin to keep the image centered within our computed box.
       let x = desiredX;
       let imgY = desiredY;
 
-      // pdf-lib rotates counter-clockwise around (x, y).
-      // Adjust origin so the rotated image stays inside the computed bounding box.
-      if (rotDeg === 180) {
+      if (rotDeg === 90) {
+        // 90 CCW: image extends LEFT by height -> shift X right by drawH
+        x = desiredX + drawH;
+        imgY = desiredY;
+      } else if (rotDeg === 180) {
+        // 180: image extends LEFT+DOWN -> shift to top-right
         x = desiredX + drawW;
         imgY = desiredY + drawH;
       } else if (rotDeg === 270) {
-        // 90 CW
-        x = desiredX + drawH;
-        imgY = desiredY + drawW;
-      } else if (rotDeg === 90) {
-        // 90 CCW: no translation needed
+        // 90 CW: image extends DOWN by width -> shift Y up by drawW
         x = desiredX;
-        imgY = desiredY;
+        imgY = desiredY + drawW;
       }
 
       page.drawImage(img, {
