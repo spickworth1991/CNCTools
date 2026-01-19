@@ -37,29 +37,28 @@ async function convertHeicToJpeg(file) {
 }
 
 async function convertAnyImageToJpeg(file) {
-  const blobUrl = URL.createObjectURL(file);
+  // NOTE: we use createImageBitmap({ imageOrientation: "from-image" }) so JPEG EXIF
+  // orientation is flattened (fixes "upside down" / rotated receipts in the PDF).
+  const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
   try {
-    const img = await new Promise((resolve, reject) => {
-      const i = new Image();
-      i.onload = () => resolve(i);
-      i.onerror = reject;
-      i.src = blobUrl;
-    });
-
     const canvas = document.createElement("canvas");
-    canvas.width = img.naturalWidth || img.width;
-    canvas.height = img.naturalHeight || img.height;
+    canvas.width = bmp.width;
+    canvas.height = bmp.height;
 
     const ctx = canvas.getContext("2d");
-    ctx.drawImage(img, 0, 0);
+    ctx.drawImage(bmp, 0, 0);
 
-    const blob = await new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/jpeg", 0.9));
+    const blob = await new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/jpeg", 0.92));
     if (!blob) throw new Error("Conversion failed.");
 
     const base = (file.name || "photo").replace(/\.[^.]+$/, "");
     return new File([blob], `${base}.jpg`, { type: "image/jpeg" });
   } finally {
-    URL.revokeObjectURL(blobUrl);
+    try {
+      bmp.close?.();
+    } catch {
+      // ignore
+    }
   }
 }
 
@@ -89,6 +88,15 @@ export default function CombineReceiptsPage() {
   const [uploadAmount, setUploadAmount] = useState(""); // ✅ required by server
   const [uploadCompanyCharged, setUploadCompanyCharged] = useState(false); // ✅ required by server
   const [uploadReceiptDate, setUploadReceiptDate] = useState(""); // optional YYYY-MM-DD
+
+  // Edit photo modal
+  const [showEditPhotoModal, setShowEditPhotoModal] = useState(false);
+  const [editPhotoId, setEditPhotoId] = useState("");
+  const [editTitle, setEditTitle] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editCompanyCharged, setEditCompanyCharged] = useState(false);
+  const [editReceiptDate, setEditReceiptDate] = useState("");
 
   async function refreshProjects(autoSelectId) {
     setLoadingProjects(true);
@@ -146,6 +154,52 @@ export default function CombineReceiptsPage() {
       if (!res.ok) throw new Error(data?.error || "Delete failed");
 
       // reload project + list so UI updates immediately
+      await loadProject(selectedId);
+      await refreshProjects();
+    } catch (err) {
+      alert(err?.message || String(err));
+    } finally {
+      setBusy("");
+    }
+  }
+
+  function openEditPhoto(ph) {
+    if (!ph?.photoId) return;
+    setEditPhotoId(ph.photoId);
+    setEditTitle(String(ph.title || ""));
+    setEditDesc(String(ph.description || ""));
+    setEditAmount(ph.amount != null ? String(ph.amount) : "");
+    setEditCompanyCharged(Boolean(ph.companyCharged));
+    setEditReceiptDate(String(ph.receiptDate || ""));
+    setShowEditPhotoModal(true);
+  }
+
+  async function saveEditPhoto() {
+    if (!selectedId || !editPhotoId) return;
+    if (!String(editTitle).trim()) return alert("Title is required.");
+    if (!String(editAmount).trim()) return alert("Amount is required.");
+
+    setBusy("Saving changes…");
+    try {
+      const res = await fetch(
+        `/api/travel/projects/${encodeURIComponent(selectedId)}/photos/${encodeURIComponent(editPhotoId)}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: String(editTitle || "").trim(),
+            description: String(editDesc || ""),
+            amount: String(editAmount || "").trim(),
+            companyCharged: Boolean(editCompanyCharged),
+            receiptDate: String(editReceiptDate || "").trim(),
+          }),
+        }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Save failed");
+
+      setShowEditPhotoModal(false);
+      setEditPhotoId("");
       await loadProject(selectedId);
       await refreshProjects();
     } catch (err) {
@@ -259,7 +313,19 @@ export default function CombineReceiptsPage() {
         file.type === "image/jpeg" ||
         file.type === "image/png";
 
-      if (!isJpgPng) file = await convertAnyImageToJpeg(file);
+      if (!isJpgPng) {
+        file = await convertAnyImageToJpeg(file);
+      } else {
+        // ✅ Many phone JPGs rely on EXIF orientation. pdf-lib does not apply EXIF,
+        // so we normalize any JPEG by redrawing it with imageOrientation: "from-image".
+        const isJpeg =
+          lowerName.endsWith(".jpg") ||
+          lowerName.endsWith(".jpeg") ||
+          String(file.type || "").toLowerCase() === "image/jpeg";
+        if (isJpeg) {
+          file = await convertAnyImageToJpeg(file);
+        }
+      }
 
       const fd = new FormData();
       fd.append("file", file);
@@ -610,6 +676,13 @@ export default function CombineReceiptsPage() {
                           <td>
                             <button
                               type="button"
+                              className="button secondary"
+                              onClick={() => openEditPhoto(ph)}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
                               className="button danger"
                               onClick={() => deletePhoto(ph.photoId)}
                               disabled={selected?.status !== "open"}   // optional: only allow delete while open
@@ -671,6 +744,71 @@ export default function CombineReceiptsPage() {
               <button className="button secondary" onClick={() => setShowCloseModal(false)}>
                 Cancel
               </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Edit photo modal */}
+      {showEditPhotoModal ? (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.55)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+            zIndex: 1000,
+          }}
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setShowEditPhotoModal(false);
+          }}
+        >
+          <div className="card" style={{ width: "min(560px, 100%)" }}>
+            <h3 style={{ marginTop: 0 }}>Edit Receipt</h3>
+
+            <label>Title</label>
+            <input className="input" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+
+            <label>Description</label>
+            <textarea
+              className="input"
+              rows={3}
+              value={editDesc}
+              onChange={(e) => setEditDesc(e.target.value)}
+            />
+
+            <label>Amount</label>
+            <input
+              className="input"
+              inputMode="decimal"
+              placeholder="e.g. 23.45"
+              value={editAmount}
+              onChange={(e) => setEditAmount(e.target.value)}
+            />
+
+            <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <input
+                type="checkbox"
+                checked={editCompanyCharged}
+                onChange={(e) => setEditCompanyCharged(e.target.checked)}
+              />
+              Company Charged?
+            </label>
+
+            <label>Receipt Date (YYYY-MM-DD)</label>
+            <input
+              className="input"
+              type="date"
+              value={editReceiptDate}
+              onChange={(e) => setEditReceiptDate(e.target.value)}
+            />
+
+            <div className="row" style={{ marginTop: 12 }}>
+              <button className="button" onClick={saveEditPhoto}>Save</button>
+              <button className="button secondary" onClick={() => setShowEditPhotoModal(false)}>Cancel</button>
             </div>
           </div>
         </div>

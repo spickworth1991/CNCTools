@@ -75,3 +75,62 @@ export async function DELETE(_req, { params }) {
     return Response.json({ error: err?.message || String(err) }, { status: 500 });
   }
 }
+
+export async function PATCH(req, { params }) {
+  try {
+    const id = params?.id;
+    const photoId = params?.photoId;
+    if (!id) return Response.json({ error: "Missing id" }, { status: 400 });
+    if (!photoId) return Response.json({ error: "Missing photoId" }, { status: 400 });
+
+    const metaKey = `travel/projects/${id}/meta.json`;
+    const meta = await getJson(metaKey);
+    if (!meta) return Response.json({ error: "Project not found" }, { status: 404 });
+
+    const body = await req.json().catch(() => null);
+    if (!body) return Response.json({ error: "Invalid JSON" }, { status: 400 });
+
+    const photos = Array.isArray(meta.photos) ? meta.photos : [];
+    const idx = photos.findIndex((p) => String(p?.photoId || "") === String(photoId));
+    if (idx < 0) return Response.json({ error: "Photo not found" }, { status: 404 });
+
+    const p = { ...photos[idx] };
+
+    // Editable fields (keep old values if not provided)
+    if ("title" in body) p.title = String(body.title || "").trim();
+    if ("description" in body) p.description = String(body.description || "").trim();
+
+    if ("receiptDate" in body) {
+      p.receiptDate = String(body.receiptDate || "").trim();
+    }
+
+    if ("companyCharged" in body) {
+      const v = body.companyCharged;
+      p.companyCharged = v === true || v === "true" || v === 1 || v === "1";
+    }
+
+    if ("amount" in body) {
+      const raw = String(body.amount || "").trim();
+      const n = Number(raw);
+      if (!Number.isFinite(n) || n < 0) {
+        return Response.json({ error: "Amount must be a valid non-negative number" }, { status: 400 });
+      }
+      p.amount = n;
+    }
+
+    // Title is still required
+    if (!String(p.title || "").trim()) {
+      return Response.json({ error: "Title is required" }, { status: 400 });
+    }
+
+    photos[idx] = p;
+    meta.photos = photos;
+    meta.updatedAt = nowIso();
+
+    await putJson(metaKey, meta);
+
+    return Response.json({ ok: true });
+  } catch (err) {
+    return Response.json({ error: err?.message || String(err) }, { status: 500 });
+  }
+}

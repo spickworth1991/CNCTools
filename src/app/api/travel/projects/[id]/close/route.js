@@ -161,10 +161,15 @@ function wrapText(text, maxChars) {
 }
 
 function exifToRotationDegrees(ori) {
-  // 1 = normal, 3 = 180, 6 = 90 CW, 8 = 270 CW
+  // EXIF Orientation values:
+  // 1 = normal
+  // 3 = rotate 180
+  // 6 = rotate 90 CW
+  // 8 = rotate 90 CCW
+  // pdf-lib's degrees() is counter-clockwise.
   if (ori === 3) return 180;
-  if (ori === 6) return 90;
-  if (ori === 8) return 270;
+  if (ori === 6) return 270; // 90 CW
+  if (ori === 8) return 90;  // 90 CCW
   return 0;
 }
 
@@ -303,15 +308,19 @@ export async function POST(req, { params }) {
       let x = desiredX;
       let imgY = desiredY;
 
-      if (rotDeg === 90) {
-        x = desiredX + drawH;
-        imgY = desiredY;
-      } else if (rotDeg === 180) {
+      // pdf-lib rotates counter-clockwise around (x, y).
+      // Adjust origin so the rotated image stays inside the computed bounding box.
+      if (rotDeg === 180) {
         x = desiredX + drawW;
         imgY = desiredY + drawH;
       } else if (rotDeg === 270) {
-        x = desiredX;
+        // 90 CW
+        x = desiredX + drawH;
         imgY = desiredY + drawW;
+      } else if (rotDeg === 90) {
+        // 90 CCW: no translation needed
+        x = desiredX;
+        imgY = desiredY;
       }
 
       page.drawImage(img, {
