@@ -2,32 +2,6 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
 
-async function reopenProject() {
-  if (!selectedId || !selected) return;
-  if (selected.status !== "closed") return alert("Only CLOSED projects can be reopened.");
-
-  const ok = confirm(
-    `Reopen this project?\n\n${selected.serviceReportNumber} — ${selected.customerName}\n\nYou can upload more receipts and generate a new PDF.`
-  );
-  if (!ok) return;
-
-  setBusy("Reopening project…");
-  try {
-    const res = await fetch(`/api/travel/projects/${encodeURIComponent(selectedId)}/reopen`, {
-      method: "POST",
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data?.error || "Reopen failed");
-
-    await loadProject(selectedId);
-    await refreshProjects();
-  } catch (err) {
-    alert(err?.message || String(err));
-  } finally {
-    setBusy("");
-  }
-}
-
 
 function fmtDate(d) {
   if (!d) return "";
@@ -127,6 +101,33 @@ export default function CombineReceiptsPage() {
       setLoadingProjects(false);
     }
   }
+
+  async function reopenProject() {
+    if (!selectedId || !selected) return;
+    if (selected.status !== "closed") return alert("Only CLOSED projects can be reopened.");
+
+    const ok = confirm(
+      `Reopen this project?\n\n${selected.serviceReportNumber} — ${selected.customerName}\n\nYou can upload more receipts and generate a new PDF.`
+    );
+    if (!ok) return;
+
+    setBusy("Reopening project…");
+    try {
+      const res = await fetch(`/api/travel/projects/${encodeURIComponent(selectedId)}/reopen`, {
+        method: "POST",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Reopen failed");
+
+      await loadProject(selectedId);
+      await refreshProjects();
+    } catch (err) {
+      alert(err?.message || String(err));
+    } finally {
+      setBusy("");
+    }
+  }
+
 
   async function deletePhoto(photoId) {
     if (!selectedId || !selected) return;
