@@ -312,12 +312,15 @@ export async function POST(req, { params }) {
       if (!originalKind) continue;
 
       // ✅ First try to rasterize (downscale + compress + auto-orient)
-      const raster = await rasterizeToJpeg(originalBytes, originalKind, preset);
+      let raster = null;
+      if (pdfQuality !== "max") {
+        // Email quality: rasterize (downscale + compress + auto-orient).
+        raster = await rasterizeToJpeg(originalBytes, originalKind, preset);
+      }
 
       let bytes = raster?.bytes || originalBytes;
       let kind = raster?.kind || originalKind;
-
-      // If we rasterized, EXIF is baked-in, so rotation should be 0
+// If we rasterized, EXIF is baked-in, so rotation should be 0
       const exifOri = !raster && kind === "jpg" ? getJpegExifOrientation(bytes) : null;
       const rotDeg = !raster ? exifToRotationDegrees(exifOri) : 0;
 

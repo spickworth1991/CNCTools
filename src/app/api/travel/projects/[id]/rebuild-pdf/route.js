@@ -161,7 +161,11 @@ function wrapText(text, maxChars) {
 
 // ===== PDF QUALITY PRESETS =====
 const PDF_QUALITY_PRESETS = {
-  email: { maxDim: 1600, jpegQuality: 0.75 },
+  // Smaller files for emailing. Re-encodes + downscales.
+  email: { maxDim: 1600, jpegQuality: 0.70 },
+
+  // "Max" means: don't recompress in the Worker; embed the stored bytes as-is.
+  // (This avoids heavy canvas work that can cause 503s on large batches.)
   max: { maxDim: 4096, jpegQuality: 0.92 },
 };
 
@@ -278,7 +282,10 @@ export async function POST(req, { params }) {
       const originalKind = sniffImageKind(originalBytes);
       if (!originalKind) continue;
 
-      const raster = await rasterizeToJpeg(originalBytes, originalKind, preset);
+      let raster = null;
+      if (pdfQuality !== "max") {
+        raster = await rasterizeToJpeg(originalBytes, originalKind, preset);
+      }
 
       let bytes = raster?.bytes || originalBytes;
       let kind = raster?.kind || originalKind;
