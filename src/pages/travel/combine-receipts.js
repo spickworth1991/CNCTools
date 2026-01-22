@@ -1,4 +1,4 @@
-// src/pages/travel/combine-receipts.js
+
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
 
@@ -51,8 +51,10 @@ async function convertHeicToJpeg(file) {
 async function convertAnyImageToJpeg(file, opts = {}) {
   // Converts ANY browser-decodable image to a resized JPEG for smaller uploads + smaller PDFs.
   // Also flattens EXIF orientation using createImageBitmap({ imageOrientation: "from-image" }).
-  const maxDim = Number(opts.maxDim) || 2200; // downscale large phone photos
-  const quality = Number.isFinite(Number(opts.quality)) ? Number(opts.quality) : 0.78;
+  //
+  // Target: Outlook-friendly PDFs when combining ~10–15 photos.
+  const maxDim = Number(opts.maxDim) || 1600; // downscale large phone photos (long edge)
+  const quality = Number.isFinite(Number(opts.quality)) ? Number(opts.quality) : 0.72;
 
   const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
   try {
@@ -76,16 +78,19 @@ async function convertAnyImageToJpeg(file, opts = {}) {
     ctx.imageSmoothingQuality = "high";
     ctx.drawImage(bmp, 0, 0, w, h);
 
-    const blob = await new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/jpeg", quality));
+    const blob = await new Promise((resolve) =>
+      canvas.toBlob((b) => resolve(b), "image/jpeg", quality)
+    );
     if (!blob) throw new Error("Conversion failed.");
 
     const base = (file.name || "photo").replace(/\.[^.]+$/, "");
     return new File([blob], `${base}.jpg`, { type: "image/jpeg" });
   } finally {
-    try { bmp.close(); } catch {}
+    try {
+      bmp.close();
+    } catch {}
   }
 }
-
 
 export default function CombineReceiptsPage() {
   const [projects, setProjects] = useState([]);
@@ -93,8 +98,6 @@ export default function CombineReceiptsPage() {
   const [selectedId, setSelectedId] = useState("");
   const [selected, setSelected] = useState(null);
   const [busy, setBusy] = useState("");
-  const [pdfQuality, setPdfQuality] = useState("email"); // "email" | "max"
-
 
   // Create form
   const [serviceReportNumber, setServiceReportNumber] = useState("");
@@ -437,8 +440,27 @@ export default function CombineReceiptsPage() {
       const isHeic = /(\.heic|\.heif)$/i.test(file.name || "") || /image\/hei(c|f)/i.test(file.type || "");
       if (isHeic) file = await convertHeicToJpeg(file);
 
-      // Normalize + compress for upload (downscale + force JPEG + fix orientation)
-      file = await convertAnyImageToJpeg(file, { maxDim: 2200, quality: 0.78 });
+      const lowerName = (file.name || "").toLowerCase();
+      const isJpgPng =
+        lowerName.endsWith(".jpg") ||
+        lowerName.endsWith(".jpeg") ||
+        lowerName.endsWith(".png") ||
+        file.type === "image/jpeg" ||
+        file.type === "image/png";
+
+      if (!isJpgPng) {
+        file = await convertAnyImageToJpeg(file, { maxDim: 1600, quality: 0.72 });
+      } else {
+        // ✅ Many phone JPGs rely on EXIF orientation. pdf-lib does not apply EXIF,
+        // so we normalize any JPEG by redrawing it with imageOrientation: "from-image".
+        const isJpeg =
+          lowerName.endsWith(".jpg") ||
+          lowerName.endsWith(".jpeg") ||
+          String(file.type || "").toLowerCase() === "image/jpeg";
+        if (isJpeg) {
+          file = await convertAnyImageToJpeg(file, { maxDim: 1600, quality: 0.72 });
+        }
+      }
 
       const fd = new FormData();
       fd.append("file", file);
@@ -486,11 +508,7 @@ export default function CombineReceiptsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         // travelEnd is OPTIONAL. If blank, server defaults to today's date.
-        body: JSON.stringify({
-        travelEnd: String(travelEndClose || "").trim(),
-        pdfQuality, // ✅ new
-      }),
-
+        body: JSON.stringify({ travelEnd: String(travelEndClose || "").trim() }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Close failed");
@@ -515,31 +533,6 @@ export default function CombineReceiptsPage() {
     if (!selectedId) return;
     window.open(`/api/travel/projects/${encodeURIComponent(selectedId)}/csv`, "_blank");
   }
-
-  async function rebuildPdf(mode) {
-    if (!selectedId) return;
-
-    setBusy(`Rebuilding PDF (${mode})…`);
-    try {
-      const res = await fetch(`/api/travel/projects/${encodeURIComponent(selectedId)}/rebuild-pdf`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pdfQuality: mode }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || "Rebuild failed");
-
-      await loadProject(selectedId);
-      await refreshProjects();
-
-      if (data?.downloadUrl) window.open(data.downloadUrl, "_blank");
-    } catch (err) {
-      alert(err?.message || String(err));
-    } finally {
-      setBusy("");
-    }
-  }
-
 
   async function deleteClosedProject() {
     if (!selectedId || !selected) return;
@@ -678,19 +671,6 @@ export default function CombineReceiptsPage() {
                 <div className="small">Created: {fmtDate(selected.createdAt)}</div>
                 {selected.closedAt ? <div className="small">Closed: {fmtDate(selected.closedAt)}</div> : null}
               </div>
-              <label>PDF Quality</label>
-                <select
-                  className="input"
-                  value={pdfQuality}
-                  onChange={(e) => setPdfQuality(e.target.value)}
-                >
-                  <option value="email">Email quality (smaller file)</option>
-                  <option value="max">Max quality (larger file)</option>
-                </select>
-                <div className="small" style={{ marginTop: -6, marginBottom: 10, opacity: 0.9 }}>
-                  Tip: use Email quality first, then rebuild Max later if you need it.
-                </div>
-
 
               {selected.status === "open" ? (
                 <div className="small" style={{ marginBottom: 10, opacity: 0.9 }}>
@@ -720,20 +700,7 @@ export default function CombineReceiptsPage() {
                   </button>
                 </div>
 
-
               ) : null}
-              {selected.status === "closed" ? (
-              <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <button className="button secondary" type="button" onClick={() => rebuildPdf("email")}>
-                  Rebuild PDF (Email)
-                </button>
-                <button className="button" type="button" onClick={() => rebuildPdf("max")}>
-                  Rebuild PDF (Max)
-                </button>
-              </div>
-            ) : null}
-
-              
 
               <div className="hr" />
 

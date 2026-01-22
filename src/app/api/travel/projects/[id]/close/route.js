@@ -87,29 +87,17 @@ function getJpegExifOrientation(bytes) {
           const tiff = start + 6;
 
           const little =
-            bytes[tiff] === 0x49 && bytes[tiff + 1] === 0x49
-              ? true
-              : bytes[tiff] === 0x4d && bytes[tiff + 1] === 0x4d
-              ? false
-              : null;
+            bytes[tiff] === 0x49 && bytes[tiff + 1] === 0x49 ? true :
+            bytes[tiff] === 0x4d && bytes[tiff + 1] === 0x4d ? false :
+            null;
           if (little == null) return null;
 
           const u16 = (off) =>
-            little
-              ? bytes[off] | (bytes[off + 1] << 8)
-              : (bytes[off] << 8) | bytes[off + 1];
+            little ? (bytes[off] | (bytes[off + 1] << 8)) : ((bytes[off] << 8) | bytes[off + 1]);
           const u32 = (off) =>
             little
-              ? (bytes[off] |
-                  (bytes[off + 1] << 8) |
-                  (bytes[off + 2] << 16) |
-                  (bytes[off + 3] << 24)) >>>
-                0
-              : ((bytes[off] << 24) |
-                  (bytes[off + 1] << 16) |
-                  (bytes[off + 2] << 8) |
-                  bytes[off + 3]) >>>
-                0;
+              ? (bytes[off] | (bytes[off + 1] << 8) | (bytes[off + 2] << 16) | (bytes[off + 3] << 24)) >>> 0
+              : ((bytes[off] << 24) | (bytes[off + 1] << 16) | (bytes[off + 2] << 8) | bytes[off + 3]) >>> 0;
 
           // TIFF header sanity: 0x002A
           if (u16(tiff + 2) !== 0x002a) return null;
@@ -185,69 +173,6 @@ function exifToRotationDegrees(ori) {
   return 0;
 }
 
-// ===== PDF QUALITY PRESETS =====
-const PDF_QUALITY_PRESETS = {
-  email: { maxDim: 1600, jpegQuality: 0.75 },
-  max: { maxDim: 4096, jpegQuality: 0.92 },
-};
-
-function pickPreset(mode) {
-  const m = String(mode || "").toLowerCase();
-  return PDF_QUALITY_PRESETS[m] || PDF_QUALITY_PRESETS.email;
-}
-
-function hasWorkerCanvasSupport() {
-  return typeof createImageBitmap === "function" && typeof OffscreenCanvas !== "undefined";
-}
-
-// Returns { bytes: Uint8Array, kind: "jpg" } or null if unsupported/fails.
-async function rasterizeToJpeg(inputBytes, inputKind, preset) {
-  try {
-    if (!hasWorkerCanvasSupport()) return null;
-
-    const mime = inputKind === "png" ? "image/png" : "image/jpeg";
-    const blob = new Blob([inputBytes], { type: mime });
-
-    // ✅ important: honors EXIF orientation if present
-    const bmp = await createImageBitmap(blob, { imageOrientation: "from-image" });
-    try {
-      const w0 = bmp.width || 0;
-      const h0 = bmp.height || 0;
-      if (!w0 || !h0) return null;
-
-      const maxDim = Number(preset?.maxDim) || 1600;
-      const quality = Number.isFinite(Number(preset?.jpegQuality)) ? Number(preset.jpegQuality) : 0.75;
-
-      const scale = Math.min(1, maxDim / Math.max(w0, h0));
-      const w = Math.max(1, Math.round(w0 * scale));
-      const h = Math.max(1, Math.round(h0 * scale));
-
-      const canvas = new OffscreenCanvas(w, h);
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(bmp, 0, 0, w, h);
-
-      const outBlob = await canvas.convertToBlob({ type: "image/jpeg", quality });
-      const ab = await outBlob.arrayBuffer();
-      return { bytes: new Uint8Array(ab), kind: "jpg" };
-    } finally {
-      try { bmp.close(); } catch {}
-    }
-  } catch {
-    return null;
-  }
-}
-
-function displayAmount(p) {
-  // resilient to old/new shapes
-  if (!p) return "";
-  if (p.amount != null && String(p.amount).trim() !== "") return String(p.amount).trim();
-
-  const cents = Number(p.amountCents);
-  if (Number.isFinite(cents)) return (cents / 100).toFixed(2);
-
-  return "";
-}
-
 export async function POST(req, { params }) {
   try {
     const id = params?.id;
@@ -259,10 +184,6 @@ export async function POST(req, { params }) {
     if (!travelEnd) {
       return Response.json({ error: "Travel End date is required to close." }, { status: 400 });
     }
-
-    // ✅ NEW: PDF quality mode (defaults to email)
-    const pdfQuality = String(body?.pdfQuality || "email").trim();
-    const preset = pickPreset(pdfQuality);
 
     const metaKey = `travel/projects/${id}/meta.json`;
     const meta = await getJson(metaKey);
@@ -299,7 +220,6 @@ export async function POST(req, { params }) {
       line("Travel Dates:", `${meta.travelStart} to ${meta.travelEnd}`);
       line("Receipts:", String(photos.length));
       line("Generated:", formatEasternDateTime(new Date()));
-      line("PDF Quality:", pdfQuality || "email");
     }
 
     // Each receipt: choose portrait/landscape page based on image
@@ -307,22 +227,12 @@ export async function POST(req, { params }) {
       const got = await getBytes(p.key);
       if (!got?.bytes) continue;
 
-      const originalBytes = got.bytes instanceof Uint8Array ? got.bytes : new Uint8Array(got.bytes);
-      const originalKind = sniffImageKind(originalBytes);
-      if (!originalKind) continue;
+      const bytes = got.bytes instanceof Uint8Array ? got.bytes : new Uint8Array(got.bytes);
+      const kind = sniffImageKind(bytes);
+      if (!kind) continue;
 
-      // ✅ First try to rasterize (downscale + compress + auto-orient)
-      let raster = null;
-      if (pdfQuality !== "max") {
-        // Email quality: rasterize (downscale + compress + auto-orient).
-        raster = await rasterizeToJpeg(originalBytes, originalKind, preset);
-      }
-
-      let bytes = raster?.bytes || originalBytes;
-      let kind = raster?.kind || originalKind;
-// If we rasterized, EXIF is baked-in, so rotation should be 0
-      const exifOri = !raster && kind === "jpg" ? getJpegExifOrientation(bytes) : null;
-      const rotDeg = !raster ? exifToRotationDegrees(exifOri) : 0;
+      const exifOri = kind === "jpg" ? getJpegExifOrientation(bytes) : null;
+      const rotDeg = exifToRotationDegrees(exifOri);
 
       const img = kind === "png" ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes);
 
@@ -330,7 +240,7 @@ export async function POST(req, { params }) {
       const baseW = base.width;
       const baseH = base.height;
 
-      // Effective dimensions AFTER rotation
+      // Effective dimensions AFTER EXIF rotation
       const effW = rotDeg % 180 === 0 ? baseW : baseH;
       const effH = rotDeg % 180 === 0 ? baseH : baseW;
 
@@ -374,18 +284,6 @@ export async function POST(req, { params }) {
         y -= 14;
       }
 
-      // ✅ NEW: Amount + Company Charged
-      const amt = displayAmount(p);
-      const cc =
-        p.companyCharged === true ? "Yes" : p.companyCharged === false ? "No" : "";
-      if (amt || cc) {
-        page.drawText(
-          `Amount: ${amt || ""}${cc ? `   Company Charged: ${cc}` : ""}`,
-          { x: margin, y, size: 10, font }
-        );
-        y -= 14;
-      }
-
       // Image area below header
       const imageTopY = y - 8;
       const imageBottomY = margin;
@@ -405,17 +303,22 @@ export async function POST(req, { params }) {
       const desiredX = (pageW - shownW) / 2;
       const desiredY = imageBottomY + (maxH - shownH) / 2;
 
-      // Your existing translation logic (kept)
+      // pdf-lib rotates counter-clockwise around (x, y).
+      // The rotated image's bounding box shifts relative to (x,y), so we translate
+      // the origin to keep the image centered within our computed box.
       let x = desiredX;
       let imgY = desiredY;
 
       if (rotDeg === 90) {
+        // 90 CCW: image extends LEFT by height -> shift X right by drawH
         x = desiredX + drawH;
         imgY = desiredY;
       } else if (rotDeg === 180) {
+        // 180: image extends LEFT+DOWN -> shift to top-right
         x = desiredX + drawW;
         imgY = desiredY + drawH;
       } else if (rotDeg === 270) {
+        // 90 CW: image extends DOWN by width -> shift Y up by drawW
         x = desiredX;
         imgY = desiredY + drawW;
       }
@@ -438,9 +341,6 @@ export async function POST(req, { params }) {
     meta.closedAt = nowIso();
     meta.updatedAt = nowIso();
     meta.pdfKey = pdfKey;
-
-    // ✅ remember last used quality
-    meta.lastPdfQuality = pdfQuality || "email";
 
     await putJson(metaKey, meta);
 

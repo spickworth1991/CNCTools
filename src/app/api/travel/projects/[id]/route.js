@@ -60,29 +60,13 @@ export async function DELETE(_req, { params }) {
   // Keep this robust for older metas that might not have `status` yet.
   const metaKey = `travel/projects/${id}/meta.json`;
   const meta = await getJson(metaKey);
-
   if (meta) {
     const status = String(meta.status || "").toLowerCase().trim();
-
-    // ✅ Future-proof: consider ANY pdf field you might add later
-    const hasAnyPdf =
-      Boolean(meta.pdfKey) ||
-      Boolean(meta.pdfKeyEmail) ||
-      Boolean(meta.pdfKeyMax) ||
-      Boolean(meta.pdfKeys?.email) ||
-      Boolean(meta.pdfKeys?.max) ||
-      // if you ever store a list/array
-      (Array.isArray(meta.pdfKeys) && meta.pdfKeys.length > 0) ||
-      // generic catch-all: any string field that looks like a pdf key
-      Object.values(meta).some(
-        (v) => typeof v === "string" && v.includes("/pdf/") && v.toLowerCase().endsWith(".pdf")
-      );
-
     const looksClosed =
       status === "closed" ||
       Boolean(meta.closedAt) ||
-      Boolean(meta.travelEnd) ||
-      hasAnyPdf;
+      Boolean(meta.pdfKey) ||
+      Boolean(meta.travelEnd);
 
     if (!looksClosed) {
       return Response.json({ error: "Only CLOSED projects can be deleted." }, { status: 400 });
