@@ -48,31 +48,44 @@ async function convertHeicToJpeg(file) {
   return new File([blob], name, { type: "image/jpeg" });
 }
 
-async function convertAnyImageToJpeg(file) {
-  // NOTE: we use createImageBitmap({ imageOrientation: "from-image" }) so JPEG EXIF
-  // orientation is flattened (fixes "upside down" / rotated receipts in the PDF).
+async function convertAnyImageToJpeg(file, opts = {}) {
+  // Converts ANY browser-decodable image to a resized JPEG for smaller uploads + smaller PDFs.
+  // Also flattens EXIF orientation using createImageBitmap({ imageOrientation: "from-image" }).
+  const maxDim = Number(opts.maxDim) || 2200; // downscale large phone photos
+  const quality = Number.isFinite(Number(opts.quality)) ? Number(opts.quality) : 0.78;
+
   const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
   try {
+    const w0 = bmp.width || 0;
+    const h0 = bmp.height || 0;
+    if (!w0 || !h0) throw new Error("Could not read image dimensions.");
+
+    // Downscale only (never upscale)
+    const scale = Math.min(1, maxDim / Math.max(w0, h0));
+    const w = Math.max(1, Math.round(w0 * scale));
+    const h = Math.max(1, Math.round(h0 * scale));
+
     const canvas = document.createElement("canvas");
-    canvas.width = bmp.width;
-    canvas.height = bmp.height;
+    canvas.width = w;
+    canvas.height = h;
 
     const ctx = canvas.getContext("2d");
-    ctx.drawImage(bmp, 0, 0);
+    if (!ctx) throw new Error("Canvas not supported.");
 
-    const blob = await new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/jpeg", 0.92));
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(bmp, 0, 0, w, h);
+
+    const blob = await new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/jpeg", quality));
     if (!blob) throw new Error("Conversion failed.");
 
     const base = (file.name || "photo").replace(/\.[^.]+$/, "");
     return new File([blob], `${base}.jpg`, { type: "image/jpeg" });
   } finally {
-    try {
-      bmp.close?.();
-    } catch {
-      // ignore
-    }
+    try { bmp.close(); } catch {}
   }
 }
+
 
 export default function CombineReceiptsPage() {
   const [projects, setProjects] = useState([]);
@@ -422,27 +435,8 @@ export default function CombineReceiptsPage() {
       const isHeic = /(\.heic|\.heif)$/i.test(file.name || "") || /image\/hei(c|f)/i.test(file.type || "");
       if (isHeic) file = await convertHeicToJpeg(file);
 
-      const lowerName = (file.name || "").toLowerCase();
-      const isJpgPng =
-        lowerName.endsWith(".jpg") ||
-        lowerName.endsWith(".jpeg") ||
-        lowerName.endsWith(".png") ||
-        file.type === "image/jpeg" ||
-        file.type === "image/png";
-
-      if (!isJpgPng) {
-        file = await convertAnyImageToJpeg(file);
-      } else {
-        // ✅ Many phone JPGs rely on EXIF orientation. pdf-lib does not apply EXIF,
-        // so we normalize any JPEG by redrawing it with imageOrientation: "from-image".
-        const isJpeg =
-          lowerName.endsWith(".jpg") ||
-          lowerName.endsWith(".jpeg") ||
-          String(file.type || "").toLowerCase() === "image/jpeg";
-        if (isJpeg) {
-          file = await convertAnyImageToJpeg(file);
-        }
-      }
+      // Normalize + compress for upload (downscale + force JPEG + fix orientation)
+      file = await convertAnyImageToJpeg(file, { maxDim: 2200, quality: 0.78 });
 
       const fd = new FormData();
       fd.append("file", file);
