@@ -1,4 +1,4 @@
-
+// src/pages/travel/combine-receipts.js
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
 
@@ -93,6 +93,8 @@ export default function CombineReceiptsPage() {
   const [selectedId, setSelectedId] = useState("");
   const [selected, setSelected] = useState(null);
   const [busy, setBusy] = useState("");
+  const [pdfQuality, setPdfQuality] = useState("email"); // "email" | "max"
+
 
   // Create form
   const [serviceReportNumber, setServiceReportNumber] = useState("");
@@ -484,7 +486,11 @@ export default function CombineReceiptsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         // travelEnd is OPTIONAL. If blank, server defaults to today's date.
-        body: JSON.stringify({ travelEnd: String(travelEndClose || "").trim() }),
+        body: JSON.stringify({
+        travelEnd: String(travelEndClose || "").trim(),
+        pdfQuality, // ✅ new
+      }),
+
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Close failed");
@@ -509,6 +515,31 @@ export default function CombineReceiptsPage() {
     if (!selectedId) return;
     window.open(`/api/travel/projects/${encodeURIComponent(selectedId)}/csv`, "_blank");
   }
+
+  async function rebuildPdf(mode) {
+    if (!selectedId) return;
+
+    setBusy(`Rebuilding PDF (${mode})…`);
+    try {
+      const res = await fetch(`/api/travel/projects/${encodeURIComponent(selectedId)}/rebuild-pdf`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pdfQuality: mode }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Rebuild failed");
+
+      await loadProject(selectedId);
+      await refreshProjects();
+
+      if (data?.downloadUrl) window.open(data.downloadUrl, "_blank");
+    } catch (err) {
+      alert(err?.message || String(err));
+    } finally {
+      setBusy("");
+    }
+  }
+
 
   async function deleteClosedProject() {
     if (!selectedId || !selected) return;
@@ -647,6 +678,19 @@ export default function CombineReceiptsPage() {
                 <div className="small">Created: {fmtDate(selected.createdAt)}</div>
                 {selected.closedAt ? <div className="small">Closed: {fmtDate(selected.closedAt)}</div> : null}
               </div>
+              <label>PDF Quality</label>
+                <select
+                  className="input"
+                  value={pdfQuality}
+                  onChange={(e) => setPdfQuality(e.target.value)}
+                >
+                  <option value="email">Email quality (smaller file)</option>
+                  <option value="max">Max quality (larger file)</option>
+                </select>
+                <div className="small" style={{ marginTop: -6, marginBottom: 10, opacity: 0.9 }}>
+                  Tip: use Email quality first, then rebuild Max later if you need it.
+                </div>
+
 
               {selected.status === "open" ? (
                 <div className="small" style={{ marginBottom: 10, opacity: 0.9 }}>
@@ -676,7 +720,20 @@ export default function CombineReceiptsPage() {
                   </button>
                 </div>
 
+
               ) : null}
+              {selected.status === "closed" ? (
+              <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button className="button secondary" type="button" onClick={() => rebuildPdf("email")}>
+                  Rebuild PDF (Email)
+                </button>
+                <button className="button" type="button" onClick={() => rebuildPdf("max")}>
+                  Rebuild PDF (Max)
+                </button>
+              </div>
+            ) : null}
+
+              
 
               <div className="hr" />
 

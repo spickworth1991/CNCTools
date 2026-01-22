@@ -16,7 +16,15 @@ export async function POST(_req, { params }) {
     const meta = await getJson(metaKey);
     if (!meta) return Response.json({ error: "Project not found" }, { status: 404 });
 
-    if (meta.status !== "closed") {
+    // Be robust: allow reopen if it "looks closed" even if status is missing/old schema
+    const status = String(meta.status || "").toLowerCase().trim();
+    const looksClosed =
+      status === "closed" ||
+      Boolean(meta.closedAt) ||
+      Boolean(meta.pdfKey) ||
+      Boolean(meta.travelEnd);
+
+    if (!looksClosed) {
       return Response.json({ error: "Only closed projects can be reopened." }, { status: 400 });
     }
 
@@ -24,13 +32,16 @@ export async function POST(_req, { params }) {
     meta.reopenedAt = nowIso();
     meta.updatedAt = nowIso();
 
-    // Clear “closed” fields so it behaves like a normal open project again
-    meta.closedAt = "";
-    meta.pdfKey = "";
+    // Clear “closed markers” so the project behaves like an open project everywhere
+    delete meta.closedAt;
+    delete meta.pdfKey;
+    delete meta.travelEnd;     // ✅ IMPORTANT
+    delete meta.closedAtIso;   // (if you ever add variants later)
+    delete meta.pdfKeyEmail;   // (if you ever add variants later)
 
     await putJson(metaKey, meta);
 
-    return Response.json({ ok: true });
+    return Response.json({ ok: true, project: meta });
   } catch (err) {
     return Response.json({ error: err?.message || String(err) }, { status: 500 });
   }
